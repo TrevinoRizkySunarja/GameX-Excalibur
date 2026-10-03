@@ -9,9 +9,22 @@
 
 The raster images were generated for this project, then encoded as WebP for smaller downloads. Their underlying source compositions were not changed during that format conversion.
 
+## Expanded world paintings
+
+Generated with the built-in image-generation tool for this update. Each original is 1536 × 1024, encoded to WebP at quality 93 and displayed at 2× with nearest-neighbor sampling. No characters or UI are baked into the world paintings. Walkable areas and object positions are separately authored in `src/levels.js`.
+
+| File                             | Direction                                                                                                                                                                                                                                                                   |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `public/art/worlds/neon.webp`    | Dense cyberpunk pixel-art harbor: wet paving, cyan and magenta shop lighting, upper-left market and workshop, central signal plaza, northeast cargo arena, south canal with bridge and southeast blossom garden. The user-provided NEON concept served as visual reference. |
+| `public/art/worlds/kage.webp`    | A samurai and science-fiction district: bamboo, torii gates, warm paper lanterns, gold gravity machinery, temple market, shrine arena, stone bridges and cherry blossoms.                                                                                                   |
+| `public/art/worlds/citadel.webp` | Pirate industrial fortress: prison blocks, cables, furnaces, lava channels, red warning lamps, a central control complex and a northeast throne arena.                                                                                                                      |
+
+Shared prompt constraints: original detailed top-down pixel-art game map; legible, connected streets and bridges; bottom-left landing zone; empty walkable lanes; no people, ships, enemies, UI or copied franchise logos. These backgrounds are visual prototypes, not a reusable Godot tile atlas.
+
 ## Runtime artwork
 
-- `src/art.js`: terrain tiles, buildings, temple gates, vegetation, player walking animation, drones, mechs, terminals, caches, Stars pickups and the Wayfarer sprite, drawn with Canvas.
+- `src/art.js`: background painting renderer, weather, walking residents, player walking animation, drones, mechs, terminals, caches, Stars pickups and the Wayfarer sprite, drawn with Canvas.
+- `src/sprites.js`: layered pixel characters and robots with clothing seams, boots, facial shading, backpacks and the glowing Omni-Tool.
 - `src/ui.js`: small interface icons, a stylized mech, and portrait atlas positioning.
 - `src/style.css`: original ship silhouette, planets, orbital station, hacking visualizations, and the epilogue beach composition.
 - `public/icon.svg`: original Project X favicon.

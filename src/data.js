@@ -1,5 +1,6 @@
-export const WORLD_WIDTH = 1440;
-export const WORLD_HEIGHT = 1040;
+import { expandWorlds, addStoryTargets } from "./levels.js";
+export const WORLD_WIDTH = 3072;
+export const WORLD_HEIGHT = 2048;
 
 export const WORLDS = {
   neon: {
@@ -261,6 +262,9 @@ export const WORLDS = {
   },
 };
 
+expandWorlds(WORLDS);
+addStoryTargets(WORLDS);
+
 export const DESTINATIONS = [
   {
     name: "NEON",
@@ -309,7 +313,24 @@ export const DESTINATIONS = [
   })),
 ];
 
-export const MINIGAMES = ["timing", "nodes", "memory", "wires", "logic"];
+export const MINIGAMES = [
+  "timing",
+  "nodes",
+  "memory",
+  "wires",
+  "logic",
+  "rhythm",
+  "maze",
+  "chess",
+  "sequence",
+  "pipes",
+  "frequency",
+  "keypad",
+  "asteroids",
+  "clean",
+  "balance",
+  "locks",
+];
 export function availableDestinations(state) {
   return [
     "neon",

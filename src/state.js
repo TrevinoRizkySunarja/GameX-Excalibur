@@ -1,3 +1,4 @@
+import { normalizeEquipment, chipStats } from "./progression.js";
 export const SAVE_KEY = "project-x-excalibur-v1";
 export const freshState = () => ({
   version: 1,
@@ -9,6 +10,9 @@ export const freshState = () => ({
   stars: 0,
   bolts: 0,
   chips: 0,
+  ownedChips: [],
+  equippedChips: [],
+  salvage: { lens: 0, relay: 0, blossom: 0, sigil: 0 },
   hacks: 0,
   flags: {},
   collected: [],
@@ -42,7 +46,7 @@ export function readSave(storage = globalThis.localStorage) {
       state.log = Array.isArray(state.log)
         ? state.log.filter((x) => typeof x === "string").slice(0, 30)
         : [];
-      return state;
+      return normalizeEquipment(state);
     }
   } catch {}
   return freshState();
@@ -80,5 +84,5 @@ export function pickHack(state, pool, rng = Math.random) {
   return type;
 }
 export function damageFor(state) {
-  return 25 + Math.min(3, state.chips) * 5;
+  return 25 + Math.min(3, state.chips) * 5 + chipStats(state).damage;
 }

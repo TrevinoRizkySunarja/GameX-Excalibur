@@ -1,3 +1,4 @@
+import { solveExtra } from "./solve-extra.js";
 import { test, expect } from "@playwright/test";
 
 async function open(page) {
@@ -20,7 +21,10 @@ async function open(page) {
 }
 async function solve(page) {
   await expect(page.locator("#minigame")).toBeVisible();
-  if (await page.locator("#timing-stop").count()) {
+  const type = await page.locator("#hack-body").getAttribute("data-hack");
+  if (!["timing", "nodes", "memory", "wires", "logic"].includes(type)) {
+    await solveExtra(page, type);
+  } else if (await page.locator("#timing-stop").count()) {
     await page.evaluate(
       () =>
         new Promise((resolve) => {
@@ -80,8 +84,10 @@ async function interaction(page, id) {
       scene = g.engine.currentScene,
       o = scene.planet.objects.find((x) => x.id === id);
     scene.player.destination = null;
-    scene.player.pos.x = o.x;
-    scene.player.pos.y = o.y + 50;
+    const actor = scene.worldActors.get(id);
+    scene.player.path = [];
+    scene.player.pos.x = actor.pos.x;
+    scene.player.pos.y = actor.pos.y + 12;
     scene.player.vel.x = scene.player.vel.y = 0;
     return o.hint;
   }, id);
@@ -124,7 +130,24 @@ test("each random minigame can succeed through its real UI", async ({
   page,
 }) => {
   await open(page);
-  for (const type of ["nodes", "timing", "wires", "logic", "memory"]) {
+  for (const type of [
+    "nodes",
+    "timing",
+    "wires",
+    "logic",
+    "memory",
+    "rhythm",
+    "maze",
+    "chess",
+    "sequence",
+    "pipes",
+    "frequency",
+    "keypad",
+    "asteroids",
+    "clean",
+    "balance",
+    "locks",
+  ]) {
     await page.evaluate(async (type) => {
       const g = window.__PROJECTX__;
       g.modal('<div id="hack-body"></div>', "hack");
@@ -141,6 +164,110 @@ test("each random minigame can succeed through its real UI", async ({
     await solve(page);
     await expect.poll(() => page.evaluate(() => window.hackResult)).toBe(true);
   }
+});
+test("expanded districts have moving residents, solid shores, routes and one-time sidequest rewards", async ({
+  page,
+}) => {
+  const errors = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await open(page);
+  await page.evaluate(() => {
+    const g = window.__PROJECTX__;
+    g.state.started = true;
+    g.state.tool = true;
+    g.close();
+  });
+  const position = () =>
+    page.evaluate(() => {
+      const a =
+        window.__PROJECTX__.engine.currentScene.worldActors.get("neon-mira");
+      return { x: a.pos.x, y: a.pos.y };
+    });
+  const initial = await position();
+  await expect
+    .poll(
+      async () => {
+        const p = await position();
+        return Math.hypot(p.x - initial.x, p.y - initial.y);
+      },
+      { timeout: 10000 },
+    )
+    .toBeGreaterThan(12);
+  // Attempt to walk and dash off a canal bridge. The shore must stay solid.
+  await page.evaluate(() => {
+    const p = window.__PROJECTX__.engine.currentScene.player;
+    p.pos.x = 1400;
+    p.pos.y = 1550;
+    p.path = [];
+    p.destination = null;
+  });
+  await page.keyboard.down("w");
+  await page.keyboard.press("Space");
+  await page.waitForTimeout(550);
+  await page.keyboard.up("w");
+  expect(
+    await page.evaluate(
+      () => window.__PROJECTX__.engine.currentScene.player.pos.y,
+    ),
+  ).toBeGreaterThanOrEqual(1543);
+  await page.keyboard.press("l");
+  await expect(page.locator(".local-map img")).toBeVisible();
+  await page.screenshot({
+    path: "test-results/neon-local-map.png",
+    fullPage: true,
+  });
+  await page.locator('[data-map-object="neon-repair"]').click();
+  await expect(page.locator("#overlay")).toBeHidden();
+  await expect
+    .poll(
+      () =>
+        page.evaluate(() => {
+          const s = window.__PROJECTX__.engine.currentScene;
+          return s.player.pos.distance(s.worldActors.get("neon-repair").pos);
+        }),
+      { timeout: 15000 },
+    )
+    .toBeLessThan(45);
+  await interaction(page, "neon-mira");
+  await page.locator("#dialogue-next").click();
+  await interaction(page, "neon-repair");
+  await solve(page);
+  await page.locator("#dialogue-next").click();
+  await interaction(page, "neon-mira");
+  await expect(page.locator("#dialogue-next")).toContainText("45 Stars");
+  await page.locator("#dialogue-next").click();
+  const stars = await page.evaluate(() => window.__PROJECTX__.state.stars);
+  await interaction(page, "neon-mira");
+  await page.locator("#dialogue-next").click();
+  expect(await page.evaluate(() => window.__PROJECTX__.state.stars)).toBe(
+    stars,
+  );
+  await page.reload();
+  await page.locator("#resume").click();
+  await page.keyboard.press("j");
+  await expect(page.locator(".quest-entry.complete")).toContainText(
+    "Een stad in beweging",
+  );
+  await page.keyboard.press("Escape");
+  for (const id of ["neon", "kage", "citadel"]) {
+    await page.evaluate(async (id) => {
+      const g = window.__PROJECTX__;
+      g.state.world = id;
+      await g.engine.goToScene(id);
+      g.close();
+      const s = g.engine.currentScene,
+        p =
+          id === "neon" ? [449, 380] : id === "kage" ? [860, 436] : [760, 464];
+      s.player.pos.x = p[0] * 2;
+      s.player.pos.y = p[1] * 2;
+    }, id);
+    await page.waitForTimeout(400);
+    await page.screenshot({
+      path: `test-results/${id}-districts.png`,
+      fullPage: true,
+    });
+  }
+  expect(errors).toEqual([]);
 });
 test("movement, pause, proximity interaction and persistent loot work", async ({
   page,
@@ -199,6 +326,7 @@ test("movement, pause, proximity interaction and persistent loot work", async ({
 test("campaign: tutorial, chapter quests, choice, bosses, epilogue and postgame", async ({
   page,
 }) => {
+  test.setTimeout(240000);
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await open(page);
@@ -260,7 +388,7 @@ test("failure deals damage, retreat preserves loot and a defeated encounter cann
   await start(page);
   await page.evaluate(() => {
     window.__PROJECTX__.state.lastHack = "timing";
-    Math.random = () => 0.99;
+    Math.random = () => 0.23;
   });
   await interaction(page, "neon-drone");
   await page.locator("#battle-hack").click();
@@ -374,4 +502,77 @@ test("shop upgrades, insufficient funds and the restore choice work", async ({
   expect(
     await page.evaluate(() => window.__PROJECTX__.state.flags.kageChoice),
   ).toBe("restore");
+});
+
+test("wandering trader sells chips and cargo, loadout persists and a story quest grants its chip", async ({
+  page,
+}) => {
+  await open(page);
+  await page.evaluate(() => {
+    const g = window.__PROJECTX__;
+    g.state.started = g.state.tool = true;
+    g.state.stars = 300;
+    g.state.salvage.lens = 2;
+    g.close();
+  });
+  const initial = await page.evaluate(
+    () =>
+      window.__PROJECTX__.engine.currentScene.worldActors.get("neon-sol").pos.x,
+  );
+  await expect
+    .poll(
+      () =>
+        page.evaluate(
+          () =>
+            window.__PROJECTX__.engine.currentScene.worldActors.get("neon-sol")
+              .pos.x,
+        ),
+      { timeout: 12000 },
+    )
+    .not.toBe(initial);
+  await interaction(page, "neon-sol");
+  await page.locator("#open-trader").click();
+  await expect(page.locator(".panel")).toContainText("REIZENDE HANDELAAR");
+  await page.locator('[data-buy-special="flow"]').click();
+  await expect(page.locator('[data-buy-special="flow"]')).toBeDisabled();
+  await page.locator("#sell-cargo").click();
+  expect(await page.evaluate(() => window.__PROJECTX__.state.stars)).toBe(248);
+  await page.screenshot({
+    path: "test-results/wandering-trader.png",
+    fullPage: true,
+  });
+  await page.locator("#trader-equipment").click();
+  await page.locator('[data-equip-chip="flow"]').click();
+  await expect(page.locator('[data-equip-chip="flow"]')).toHaveText(
+    "Verwijder uit slot",
+  );
+  await page.screenshot({
+    path: "test-results/chip-build.png",
+    fullPage: true,
+  });
+  await page.keyboard.press("Escape");
+  await interaction(page, "neon-nori");
+  await page.locator("#dialogue-next").click();
+  await interaction(page, "neon-postbox");
+  await solve(page);
+  await page.locator("#dialogue-next").click();
+  await interaction(page, "neon-nori");
+  await expect(page.locator(".panel")).toContainText("bleven hopen");
+  await page.locator("#dialogue-next").click();
+  // Flow was already purchased, so the guaranteed quest Chip is compensated by 30 Stars.
+  expect(await page.evaluate(() => window.__PROJECTX__.state.stars)).toBe(340);
+  await page.reload();
+  await page.locator("#resume").click();
+  await page.keyboard.press("i");
+  await expect(page.locator('[data-equip-chip="flow"]')).toHaveText(
+    "Verwijder uit slot",
+  );
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({
+    path: "test-results/chips-mobile.png",
+    fullPage: true,
+  });
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(390);
 });

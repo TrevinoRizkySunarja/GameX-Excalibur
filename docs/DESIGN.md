@@ -38,7 +38,7 @@ These concepts are placeholders for future world building, not extra playable le
 
 ## Hack tasks, results and themes
 
-- **Task:** one of five minigames is randomly chosen. Immediate repeats are avoided when another task exists.
+- **Task:** one of sixteen minigames is randomly chosen. Immediate repeats are avoided when another task exists.
 - **Result:** battle success deals upgrade-dependent damage; terminals advance missions; archive success opens secrets.
 - **Theme:** NEON uses data-network presentation, KAGE uses an anchor/samurai protocol, CITADEL uses imperial encryption. Rules remain consistent.
 
@@ -50,14 +50,41 @@ In the arena, a failed task or expired timer produces a counterattack. The playe
 - Chests provide Stars and bolts once.
 - Normal encounters provide Stars and hardware once.
 - Bosses provide stronger rewards, a chip if an upgrade slot is available, and guaranteed coordinates or story progress.
-- Chips increase hack damage from 25 to a maximum of 40.
+- The original base software upgrades increase hack damage from 25 to 40. Eight additional collectible Chips offer distinct passive effects; two can be equipped at once. Damage Chips stack with the base upgrades.
 - Bolts fund two movement upgrades: +15 movement speed and a shorter dash cooldown per upgrade.
-- Stars buy chips and recovery; bolts can also be recycled into Stars.
+- Stars buy Chips and recovery; bolts can also be recycled into Stars. Four types of salvage can be sold to traders. Shops show prices and reject duplicate purchases.
 - All three archives complete the optional large quest and give bonus Stars and a chip if there is room.
 
 ## Scope and next experiments
 
-The first build deliberately proves the core loop with three compact worlds. It does not implement seamless space-flight, twelve fully built planets, multiplayer, large branching cutscenes, every brainstormed minigame, or a live-service endgame.
+The expanded build proves the loop with three 3072 × 2048 worlds and sixteen tasks. The other nine destinations remain concepts. It does not implement seamless space flight, multiplayer, large branching cutscenes or a live-service endgame.
+
+Each world uses a detailed generated background with authored collision and navigation rectangles. Foreground residents, ships, enemies and interactions remain live Excalibur actors. The paintings do not provide a destructible world, interior maps or automatic foreground occlusion. These are visual prototypes rather than production tile sets for Godot.
+
+Eighteen residents follow short routes and stop while the player approaches. Quest givers remember acceptance, repairs and claimed rewards in the existing save. Completed main-story and loot IDs remain compatible with the earlier prototype.
+
+### The first four sidequests
+
+| Quest                | Destination | Giver    | Task                              | Completion reward  |
+| -------------------- | ----------- | -------- | --------------------------------- | ------------------ |
+| Een stad in beweging | NEON        | Mira     | Restore the bridge fuses          | 45 Stars + 3 bolts |
+| Bloei tussen beton   | NEON        | Aya      | Restore the irrigation controller | 40 Stars + 3 bolts |
+| Het water herinnert  | KAGE        | Hana     | Restore the temple pump           | 45 Stars + 3 bolts |
+| Niemand achterlaten  | CITADEL     | Dr. Vale | Open the medical cell door        | 60 Stars + 3 bolts |
+
+Each repair also gives 12 Stars once. Return to the NPC to claim the quest reward once. Additional chests, patrol encounters, Stars and the original secret archives reward exploration.
+
+### Hack library
+
+| Category       | Tasks                                                            |
+| -------------- | ---------------------------------------------------------------- |
+| Timing and aim | Timing bar, five rhythm targets, moving hostile targets          |
+| Memory         | Symbol sequence, temporary keypad code                           |
+| Logic          | Chess mate-in-one, cause-and-effect combinations, rotating pipes |
+| Short tasks    | Matching wires, ordered pulses, numbers 1–9, filter cleanup      |
+| Control        | Cursor maze, frequency sliders, energy balance, symbol locks     |
+
+All sixteen use the same random selection system in battles and exploration. They do not grant specific effects or belong exclusively to one world. The three planet themes change their presentation. The practice terminal also assigns a random task rather than letting the player choose one.
 
 Useful next playtest questions:
 
@@ -66,3 +93,27 @@ Useful next playtest questions:
 3. Which minigame feels most natural with the Omni-Tool?
 4. Does the KAGE choice affect how players interpret the ending?
 5. Do Stars, bolts and chips have clearly different uses?
+
+## Story and economy expansion
+
+The side stories follow the consequences of the campaign: NEON’s residents keep the city alive, KAGE’s inhabitants preserve their community and the Citadel’s prisoners organize an escape. NPC dialogue acknowledges the completed campaign. These are original characters and stories; the cited inspiration games inform the idea of lively hubs, distinct loot and optional quest chains.
+
+| Sidequest                    | Giver    | Requirement / objectives                             | Special Chip     |
+| ---------------------------- | -------- | ---------------------------------------------------- | ---------------- |
+| De nacht blijft van ons      | Mira     | Finish bridge repair; restore two power distributors | Overclock        |
+| Een brief zonder ontvanger   | Nori     | Recover an intercepted family letter                 | Flow Circuit     |
+| Wat de stad onthoudt         | Juno     | Unlock NEON’s hidden archive                         | Tijdsbuffertje   |
+| Twee klokken voor morgen     | Hana     | Finish water repair; restore both resonance bells    | Kage Resonance   |
+| De laatste lantaarnkaravaan  | Taro     | Defeat the Ronin drone and recover its supply chest  | Sterrenzoeker    |
+| Een eed zonder meester       | Zen      | Defeat Vane                                          | Aegis-plaat      |
+| Een stem buiten de muren     | Sera     | Restore two evacuation beacons                       | Phoenix Protocol |
+| Een robot kiest zelf         | ECHO     | Unlock two forbidden memory cores                    | Paradox Kernel   |
+| De rekening van het imperium | Dr. Vale | Open the medical door, then defeat two patrols       | Aegis-plaat      |
+
+Combined with the first four quests this gives thirteen sidequests, in addition to the main campaign and the three-archive post-campaign objective. Each contract awards its listed Stars, three bolts and any promised Chip. Duplicate Chip rewards become thirty Stars. Required objectives have fixed locations and are not gated by random loot.
+
+### Shops and builds
+
+Rhea, Yui and Dr. Vale run local shops. Sol, Taro and ECHO walk longer district routes and stop when approached. All six offer their own Chip selection and sell repairs. They buy valuable cargo, but never consume quest completion data. Inventory is finite per unique Chip rather than a real-time rotating shop schedule.
+
+The equipment screen (I) holds two special Chip slots. It displays the resulting battle damage, bonus hack time and counterattack protection. Equipment, cargo and quest claims persist in browser saves. The random hack selection pool stays unchanged by equipment.

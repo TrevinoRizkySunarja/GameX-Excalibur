@@ -1,37 +1,14 @@
 import { click, success, fail } from "./audio.js";
 const symbols = ["◇", "△", "○", "□"];
-const configs = {
-  timing: [
-    "Signaal vergrendelen",
-    "Stop de indicator in het verlichte venster.",
-    "TIMING",
-  ],
-  nodes: [
-    "Datapulsen volgen",
-    "Klik de vijf pulsen in volgorde: 1 → 5.",
-    "REACTIE",
-  ],
-  memory: [
-    "Patroon reconstrueren",
-    "Onthoud de reeks en voer hem daarna opnieuw in.",
-    "GEHEUGEN",
-  ],
-  wires: [
-    "Verbinding herstellen",
-    "Verbind elke linker aansluiting met hetzelfde symbool rechts.",
-    "LOGICA",
-  ],
-  logic: [
-    "Oorzaak & gevolg",
-    "Kies de combinatie die de gevraagde reactie veroorzaakt.",
-    "COMBINATIE",
-  ],
-};
+import { HACKS as configs } from "./hack-catalog.js";
+import { mountExtra } from "./extra-hacks.js";
 const shuffle = (arr) => [...arr].sort(() => Math.random() - 0.5);
 
-export function mountHack(type, world, difficulty, onResult) {
+export function mountHack(type, world, difficulty, onResult, options = {}) {
   const root = document.querySelector("#hack-body");
-  const [name, instruction, category] = configs[type];
+  const [name, instruction, category, limit] = configs[type] || configs.timing;
+  root.dataset.theme = world;
+  root.dataset.hack = type;
   root.innerHTML = `<div class="hack-heading"><span class="eyebrow">${category} / WILLEKEURIGE OPDRACHT</span><h2>${name}</h2><p>${instruction}</p></div><div id="minigame" class="minigame"></div><div class="hack-clock"><div id="clock-fill"></div></div><div class="hack-meta"><span id="hack-feedback">Maak verbinding met het netwerk.</span><span id="hack-seconds"></span></div>`;
   const field = root.querySelector("#minigame"),
     feedback = root.querySelector("#hack-feedback"),
@@ -39,13 +16,15 @@ export function mountHack(type, world, difficulty, onResult) {
   let finished = false,
     raf,
     interval,
-    seconds = 18 + Math.max(0, 3 - difficulty) * 2,
+    seconds =
+      limit + Math.max(0, 3 - difficulty) * 3 + (options.extraSeconds || 0),
     start = performance.now(),
     extras = [];
   const done = (ok) => {
     if (finished) return;
     finished = true;
     cleanup();
+    field.inert = true;
     (ok ? success : fail)();
     feedback.textContent = ok
       ? "Verbinding succesvol. Realiteit herschreven."
@@ -59,6 +38,7 @@ export function mountHack(type, world, difficulty, onResult) {
   const onKey = (fn) => {
     const h = (e) => {
       if (e.repeat || finished) return;
+      if (e.target.matches("input,textarea")) return;
       fn(e);
     };
     window.addEventListener("keydown", h);
@@ -214,7 +194,7 @@ export function mountHack(type, world, difficulty, onResult) {
         }),
     );
     hint("Selecteer links een poort.");
-  } else {
+  } else if (type === "logic") {
     const questions = [
       {
         goal: "VUUR",
@@ -249,6 +229,30 @@ export function mountHack(type, world, difficulty, onResult) {
       .querySelectorAll("button")
       .forEach((b) => (b.onclick = () => done(b.textContent === q.correct)));
     hint("Kies één combinatie.");
+  }
+  if (!["timing", "nodes", "memory", "wires", "logic"].includes(type)) {
+    mountExtra(type, {
+      field,
+      hint,
+      done,
+      onKey,
+      difficulty,
+      click,
+      later: (fn, ms) =>
+        extras.push(
+          setTimeout(() => {
+            if (!finished) fn();
+          }, ms),
+        ),
+      animate: (fn) => {
+        const frame = (now) => {
+          if (finished) return;
+          fn(now);
+          if (!finished) raf = requestAnimationFrame(frame);
+        };
+        raf = requestAnimationFrame(frame);
+      },
+    });
   }
   function toneOnce() {
     click();
