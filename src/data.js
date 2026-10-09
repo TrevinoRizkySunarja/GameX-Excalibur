@@ -1,4 +1,5 @@
 import { expandWorlds, addStoryTargets } from "./levels.js";
+import { attachGangs } from "./encounters.js";
 export const WORLD_WIDTH = 3072;
 export const WORLD_HEIGHT = 2048;
 
@@ -264,6 +265,7 @@ export const WORLDS = {
 
 expandWorlds(WORLDS);
 addStoryTargets(WORLDS);
+attachGangs(WORLDS);
 
 export const DESTINATIONS = [
   {

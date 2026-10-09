@@ -6,6 +6,7 @@ import "@fontsource/dm-sans/latin-400.css";
 import "@fontsource/dm-sans/latin-600.css";
 import "@fontsource/dm-sans/latin-700.css";
 import "./style.css";
+import "./cinematics.css";
 import { createEngine } from "./world.js";
 import {
   freshState,
@@ -46,6 +47,27 @@ import {
 import { HACKS } from "./hack-catalog.js";
 import { click, success, setAudio } from "./audio.js";
 import { icon, portrait, button, mech } from "./ui.js";
+import { worldMapURL } from "./world-renderer.js";
+import {
+  cinematicMarkup,
+  mountSubtitle,
+  encounterMarkup,
+  mountEncounter,
+} from "./cinematics.js";
+import {
+  PROLOGUE,
+  characterFor,
+  imageForCharacter,
+  BOSS_INTROS,
+} from "./story.js";
+import {
+  createBattle,
+  selectTarget,
+  aliveMembers,
+  battleWon,
+  resolveBattleHack,
+  battleRewards,
+} from "./encounters.js";
 
 const app = document.querySelector("#app");
 app.innerHTML = `<div class="game-shell">
@@ -61,6 +83,7 @@ export class ProjectX {
     this.paused = true;
     this.engine = null;
     this.hackCleanup = null;
+    this.cinematicCleanup = null;
     this.battle = null;
     this.modalType = "";
     this.toastTimer = null;
@@ -131,8 +154,11 @@ export class ProjectX {
         : b,
     );
     document.querySelector("#district-name").textContent = district.name;
-    document.querySelector(".radar").style.backgroundImage =
-      `url("${import.meta.env.BASE_URL}${world.art}")`;
+    const radar = document.querySelector(".radar");
+    if (radar.dataset.world !== world.id) {
+      radar.style.backgroundImage = `url("${worldMapURL(world)}")`;
+      radar.dataset.world = world.id;
+    }
 
     document.querySelector("#coordinates").textContent =
       `${Math.round(pos.x)} : ${Math.round(pos.y)}`;
@@ -147,6 +173,8 @@ export class ProjectX {
     }
   }
   modal(html, type = "dialogue", wide = false) {
+    this.cinematicCleanup?.();
+    this.cinematicCleanup = null;
     this.hackCleanup?.();
     this.hackCleanup = null;
     this.paused = true;
@@ -154,15 +182,18 @@ export class ProjectX {
     this.setPrompt(null);
     const el = document.querySelector("#overlay");
     el.hidden = false;
-    el.className = `overlay ${type === "title" ? "title-overlay" : ""}`;
+    el.className = `overlay ${type === "title" ? "title-overlay" : ""} ${type === "cinematic" ? "cinematic-overlay" : ""} ${type === "encounter" ? "encounter-overlay" : ""}`;
     el.innerHTML = `<section class="panel ${wide ? "wide" : ""}" style="--accent:${WORLDS[this.state.world].accent}">${html}</section>`;
     requestAnimationFrame(() =>
-      el
-        .querySelector("button:not([disabled])")
-        ?.focus({ preventScroll: true }),
+      (
+        el.querySelector(".dialogue-actions > button:not([disabled])") ||
+        el.querySelector("button:not([disabled])")
+      )?.focus({ preventScroll: true }),
     );
   }
   close() {
+    this.cinematicCleanup?.();
+    this.cinematicCleanup = null;
     this.hackCleanup?.();
     this.hackCleanup = null;
     document.querySelector("#overlay").hidden = true;
@@ -195,9 +226,20 @@ export class ProjectX {
     action = () => this.close(),
     portraitId = 5,
   ) {
+    const id = characterFor(person, portraitId);
+    const frame = {
+      speaker: person,
+      portrait: id,
+      title: WORLDS[this.state.world].subtitle,
+      image: imageForCharacter(id),
+      text: lines.join("\n\n"),
+    };
     this.modal(
-      `<div class="dialogue-layout">${portrait(portraitId)}<div><span class="eyebrow">TRANSMISSIE / ${person}</span><h1>${person}</h1>${lines.map((t) => `<p>${t}</p>`).join("")}<div class="dialogue-actions">${button("dialogue-next", actionText)}<span>OMNI-LINK // SECURE</span></div></div></div>`,
+      cinematicMarkup(frame, WORLDS[this.state.world], { action: actionText }),
+      "cinematic",
+      true,
     );
+    this.cinematicCleanup = mountSubtitle(frame);
     this.bind("dialogue-next", action);
   }
   title() {
@@ -236,34 +278,25 @@ export class ProjectX {
     this.prologue();
   }
   prologue() {
-    const scenes = [
-      [
-        "VÓÓR DE STILTE",
-        "Je thuisplaneet was vredig. Tot je oom terugkeerde met een piratenvloot. Hij wilde de zeldzame kernenergie van je familie — en alles wat ermee gemaakt kon worden.",
-        0,
-      ],
-      [
-        "DE WAYFARER",
-        "Je ouders stuurden je weg in een automatisch vrachtschip. Zij bleven achter. Jarenlang was de boordcomputer je enige gezelschap. Je groeide op tussen onbekende sterren.",
-        5,
-      ],
-      [
-        "EEN VERBODEN PROTOTYPE",
-        "Als tiener vind je in het vrachtruim de Omni-Tool. Het apparaat kan natuurwetten herschrijven. Voor anderen is de energiestroom dodelijk. Jouw bloed kan hem geleiden.",
-        0,
-      ],
-    ];
     let index = 0;
     const next = () => {
-      const [title, text, p] = scenes[index];
+      const frame = { ...PROLOGUE[index], label: "PROLOOG / DE WAYFARER" };
       this.modal(
-        `<div class="story-split"><div class="story-image"><img src="${import.meta.env.BASE_URL}art/key-art.webp" alt="Jonge reiziger bij zijn schip tussen sci-fi planeten"/>${portrait(p, "story-portrait")}</div><div class="story-copy"><span class="eyebrow">PROLOOG / ${String(index + 1).padStart(2, "0")}</span><h1>${title}</h1><p>${text}</p>${button("story-next", index === 2 ? "Vind de Omni-Tool" : "Volgende " + icon("arrow"))}</div></div>`,
-        "story",
+        cinematicMarkup(frame, WORLDS.neon, {
+          buttonId: "story-next",
+          action:
+            index === PROLOGUE.length - 1 ? "Vind de Omni-Tool" : "Volgende",
+          counter: `${index + 1} / ${PROLOGUE.length}`,
+          skip: true,
+        }),
+        "cinematic",
         true,
       );
+      this.cinematicCleanup = mountSubtitle(frame);
+      this.bind("skip-story", () => this.ship());
       this.bind("story-next", () => {
         index++;
-        if (index < scenes.length) next();
+        if (index < PROLOGUE.length) next();
         else this.ship();
       });
     };
@@ -275,6 +308,13 @@ export class ProjectX {
       "ship",
       true,
     );
+    document
+      .querySelector(".ship-copy .button-stack")
+      .insertAdjacentHTML(
+        "beforeend",
+        button("ship-memories", "Bekijk het beginverhaal", "ghost"),
+      );
+    this.bind("ship-memories", () => this.prologue());
     this.closeButton(() => (this.state.tool ? this.close() : this.title()));
     this.bind("tool-tutorial", () =>
       this.hack(
@@ -374,7 +414,7 @@ export class ProjectX {
         !this.state.defeated.includes(o.id),
     );
     this.modal(
-      `${this.header("LOKALE NAVIGATIE / " + w.name, "Vind je eigen route.")}<p>De straten verbinden de districten. Klik een marker om erheen te lopen, of verken zelf met WASD.</p><div class="local-map"><img src="${import.meta.env.BASE_URL}${w.art}" alt="Plattegrond van ${w.name}"/>${objects
+      `${this.header("LOKALE NAVIGATIE / " + w.name, "Vind je eigen route.")}<p>De straten verbinden de districten. Klik een marker om erheen te lopen, of verken zelf met WASD.</p><div class="local-map"><img src="${worldMapURL(w)}" alt="Plattegrond van ${w.name}"/>${objects
         .map((o) => {
           const a = scene.worldActors.get(o.id),
             x = a?.pos.x ?? o.x,
@@ -983,23 +1023,39 @@ export class ProjectX {
     );
   }
   startBattle(obj) {
-    this.battle = {
-      ...obj,
-      currentHp:
-        obj.hp -
-        (obj.id === "kage-boss" && this.state.flags.kageChoice === "overload"
-          ? 40
-          : 0),
-      maxHp: obj.hp,
-      attempts: 0,
-      turn: 1,
-    };
-    this.battleReady();
+    const intro = BOSS_INTROS[obj.id],
+      flag = "seen_intro_" + obj.id;
+    if (intro && !this.state.flags[flag]) {
+      const frame = {
+        ...intro,
+        title: obj.name,
+        label: WORLDS[this.state.world].name + " / CONFRONTATIE",
+      };
+      this.modal(
+        cinematicMarkup(frame, WORLDS[this.state.world], {
+          action: "Start de confrontatie",
+        }),
+        "cinematic",
+        true,
+      );
+      this.cinematicCleanup = mountSubtitle(frame);
+      this.bind("dialogue-next", () => {
+        this.state.flags[flag] = true;
+        this.save();
+        this.startBattle(obj);
+      });
+      return;
+    }
+    const b = (this.battle = createBattle(obj, this.state));
+    this.modal(encounterMarkup(b, WORLDS[this.state.world]), "encounter", true);
+    this.cinematicCleanup = mountEncounter(() => {
+      if (this.battle === b) this.battleReady();
+    });
   }
-  battleMarkup(inner) {
+  battleMarkup(inner, allowTargets = true) {
     const b = this.battle,
       w = WORLDS[this.state.world];
-    return `<div class="battle-top"><span class="eyebrow">ENCOUNTER / CHAPTER ${w.chapter}</span><span class="battle-round">LINK ${String(b.turn).padStart(2, "0")}</span></div><div class="battle-grid"><aside class="opponent">${b.id === "citadel-boss" ? portrait(3, "boss-portrait") : mech(w.id)}<span class="eyebrow">${b.type === "boss" ? "BOSS SIGNAL" : "VIJANDELIJK SIGNAAL"}</span><h2>${b.name}</h2><div class="enemy-meter"><i style="width:${(b.currentHp / b.maxHp) * 100}%"></i></div><div class="enemy-stats"><span>${Math.max(0, b.currentHp)} / ${b.maxHp} HP</span><span>${w.name}</span></div><div class="battle-self">${portrait(0)}<span>JOUW SIGNAAL<b>${this.state.hp} / 100</b></span></div><p class="small-note">Elke geslaagde hack doet ${damageFor(this.state)} damage. Een mislukte link geeft de vijand een tegenaanval.</p></aside><section class="battle-task">${inner}</section></div>`;
+    return `<div class="battle-top"><span class="eyebrow">ENCOUNTER / CHAPTER ${w.chapter}</span><span class="battle-round">LINK ${String(b.turn).padStart(2, "0")}</span></div>${b.members.length > 1 ? `<div class="gang-roster" aria-label="Kies een vijandelijk doel">${b.members.map((m, i) => `<button data-enemy-target="${i}" class="gang-member ${b.active === i ? "selected" : ""} ${m.hp <= 0 ? "defeated" : ""}" aria-pressed="${b.active === i}" ${!allowTargets || m.hp <= 0 ? "disabled" : ""}><span>${m.role}</span><strong>${m.name}</strong><small>${m.hp <= 0 ? "UITGESCHAKELD" : m.hp + " / " + m.maxHp + " HP"}</small><i style="--remaining:${(m.hp / m.maxHp) * 100}%"></i></button>`).join("")}</div>` : ""}<div class="battle-grid"><aside class="opponent">${b.id === "citadel-boss" ? portrait(3, "boss-portrait") : mech(w.id)}<span class="eyebrow">${b.type === "boss" ? "BOSS SIGNAL" : "VIJANDELIJK SIGNAAL"}</span><h2>${b.name}</h2><div class="enemy-meter"><i style="width:${(b.currentHp / b.maxHp) * 100}%"></i></div><div class="enemy-stats"><span>${Math.max(0, b.currentHp)} / ${b.maxHp} HP</span><span>${w.name}</span></div><div class="battle-self">${portrait(0)}<span>JOUW SIGNAAL<b>${this.state.hp} / 100</b></span></div><p class="small-note">Elke geslaagde hack doet ${damageFor(this.state)} damage. Een mislukte link geeft de vijand een tegenaanval.${b.members.length > 1 ? ` ${aliveMembers(b).length} signalen actief; iedere extra vijand versterkt een tegenaanval met 2.` : ""}</p></aside><section class="battle-task">${inner}</section></div>`;
   }
   battleReady(
     message = "De Omni-Tool zoekt een ingang in het vijandelijke systeem.",
@@ -1014,6 +1070,12 @@ export class ProjectX {
       true,
     );
     this.bind("battle-hack", () => this.battleHack());
+    document.querySelectorAll("[data-enemy-target]").forEach((button) => {
+      button.onclick = () => {
+        if (selectTarget(b, Number(button.dataset.enemyTarget)))
+          this.battleReady("De Omni-Tool richt zich op " + b.name + ".");
+      };
+    });
     this.bind("battle-flee", () => {
       this.close();
       this.toast("Je trekt je terug. Herstel gratis op je schip.");
@@ -1027,6 +1089,7 @@ export class ProjectX {
     this.modal(
       this.battleMarkup(
         `<div class="hack-theme-label">${this.state.world === "kage" ? "ZWAARDPROTOCOL / KAGE" : "OMNI-TOOL / REALITY OVERRIDE"}</div><div id="hack-body"></div>`,
+        false,
       ),
       "battle-hack",
       true,
@@ -1037,25 +1100,13 @@ export class ProjectX {
       Number(WORLDS[this.state.world].chapter),
       (ok) => {
         this.hackCleanup = null;
-        let message;
-        if (ok) {
-          const damage = damageFor(this.state);
-          b.currentHp -= damage;
-          this.state.hp = Math.min(
-            100,
-            this.state.hp + chipStats(this.state).heal,
-          );
-          this.state.hacks++;
-          message = `Hack geslaagd. ${damage} damage — ${["zijn energiecel raakt overbelast.", "de zwaartekracht slaat door zijn pantser.", "zijn motoren worden tegen hem gekeerd."][Math.floor(Math.random() * 3)]}`;
-        } else {
-          const counter = Math.max(1, b.damage - chipStats(this.state).shield);
-          this.state.hp = Math.max(0, this.state.hp - counter);
-          message = `Link verbroken. ${b.name.split(" · ")[0]} countert: −${counter} vitaal signaal.`;
-        }
-        b.turn++;
+        const result = resolveBattleHack(b, this.state, ok);
+        const message = ok
+          ? `Hack geslaagd. ${result.damage} damage op ${result.name}.${result.defeated ? " Signaal uitgeschakeld." : ""}`
+          : `Link verbroken. ${result.name} countert: −${result.damage} vitaal signaal.${result.support ? " De groep versterkt de tegenaanval." : ""}`;
         this.save();
         setTimeout(() => {
-          if (b.currentHp <= 0) this.battleWin();
+          if (battleWon(b)) this.battleWin();
           else if (this.state.hp <= 0) this.battleLost();
           else this.battleReady(message);
         }, 450);
@@ -1063,7 +1114,7 @@ export class ProjectX {
     );
   }
   battleLost() {
-    const name = this.battle.name;
+    const name = this.battle.encounterName;
     this.modal(
       `<span class="eyebrow">NOODPROTOCOL / ARI</span><h1 class="panel-title">Signaal verloren. Jij leeft.</h1><p>${name} heeft de verbinding gebroken. ARI haalt je terug naar de Wayfarer. Je verzamelde loot en voltooide missies blijven behouden.</p>${button("respawn", "Terug naar je schip")}`,
       "defeat",
@@ -1087,12 +1138,14 @@ export class ProjectX {
     }
     this.state.defeated.push(b.id);
     const boss = b.type === "boss";
-    grant(this.state, {
-      stars: (boss ? 60 : 18) + chipStats(this.state).stars,
-      bolts: boss ? 5 : 2,
-      chips: boss && this.state.chips < 3 ? 1 : 0,
-    });
-    const salvage = salvageDrop(this.state, this.state.world, boss);
+    const rewards = battleRewards(b, this.state);
+    grant(this.state, rewards);
+    const salvageCount = boss || b.members.length > 1 ? 2 : 1;
+    const salvage = salvageDrop(
+      this.state,
+      this.state.world,
+      salvageCount === 2,
+    );
     if (b.id === "neon-boss") {
       this.state.flags.neonBoss = true;
       record(this.state, "K-9 verslagen. Het manifest wijst naar KAGE.");
@@ -1111,7 +1164,7 @@ export class ProjectX {
     this.save();
     success();
     this.modal(
-      `<div class="victory"><div class="victory-mark">${icon("check")}</div><span class="eyebrow">VIJANDELIJK SIGNAAL / OFFLINE</span><h1>${boss ? "Systeem overwonnen." : "Link voltooid."}</h1><p>${b.id === "neon-boss" ? "Het transportmanifest bevat coördinaten voor KAGE." : b.id === "kage-boss" ? "Vane’s navigatiekern onthult de Citadel." : b.id === "citadel-boss" ? "Het Mech-Tech Armour valt uiteen. De deur naar je ouders gaat open." : "De drone is uitgeschakeld. Je ontvangt de achtergebleven hardware."}</p><div class="loot-summary"><span>${icon("star")} +${(boss ? 60 : 18) + chipStats(this.state).stars} STARS</span><span>${icon("bolt")} +${boss ? 5 : 2} BOUTEN</span>${boss ? "<span>SOFTWARE GEÜPDATET</span>" : ""}<span>${boss ? 2 : 1} × ${salvage}</span></div>${button("win-continue", b.id === "citadel-boss" ? "Vind je ouders" : "Ga verder " + icon("arrow"))}</div>`,
+      `<div class="victory"><div class="victory-mark">${icon("check")}</div><span class="eyebrow">VIJANDELIJK SIGNAAL / OFFLINE</span><h1>${boss ? "Systeem overwonnen." : "Link voltooid."}</h1><p>${b.id === "neon-boss" ? "Het transportmanifest bevat coördinaten voor KAGE." : b.id === "kage-boss" ? "Vane’s navigatiekern onthult de Citadel." : b.id === "citadel-boss" ? "Het Mech-Tech Armour valt uiteen. De deur naar je ouders gaat open." : b.members.length > 1 ? `${b.encounterName} is volledig verslagen. Je ontvangt de buit van de groep.` : "De drone is uitgeschakeld. Je ontvangt de achtergebleven hardware."}</p><div class="loot-summary"><span>${icon("star")} +${rewards.stars} STARS</span><span>${icon("bolt")} +${rewards.bolts} BOUTEN</span>${boss ? "<span>SOFTWARE GEÜPDATET</span>" : ""}<span>${salvageCount} × ${salvage}</span></div>${button("win-continue", b.id === "citadel-boss" ? "Vind je ouders" : "Ga verder " + icon("arrow"))}</div>`,
       "victory",
     );
     this.bind("win-continue", () =>
@@ -1139,11 +1192,30 @@ export class ProjectX {
     ];
     const next = () => {
       const [title, text] = scenes[i];
-      this.modal(
-        `<div class="ending-card ${i === 2 ? "beach" : ""}"><div class="ending-stars"></div><span class="eyebrow">EPILOOG / ${i + 1} VAN 3</span><h1>${title}</h1><p>${text}</p>${i === 2 ? '<div class="beach-scene"><span class="beach-sun"></span><span class="beach-person"></span><span class="coconut">◒</span></div>' : ""}${button("ending-next", i === 2 ? "Blijf het universum verkennen" : "Verder " + icon("arrow"))}${i === 2 ? '<span class="ending-credit">PROJECT X · TREV, SISSI & TEAM<br>EXCALIBUR PROOF OF CONCEPT</span>' : ""}</div>`,
-        "ending",
-        true,
-      );
+      if (i < 2) {
+        const frame = {
+          label: "EPILOOG",
+          title,
+          text,
+          speaker: i === 0 ? "Jij · hereniging" : "ARI",
+          portrait: i === 0 ? "hero" : "ari",
+          image: i === 0 ? "chapter-6" : "prologue-5",
+        };
+        this.modal(
+          cinematicMarkup(frame, WORLDS.citadel, {
+            buttonId: "ending-next",
+            counter: `${i + 1} / 3`,
+          }),
+          "cinematic",
+          true,
+        );
+        this.cinematicCleanup = mountSubtitle(frame);
+      } else
+        this.modal(
+          `<div class="ending-card beach"><div class="ending-stars"></div><span class="eyebrow">EPILOOG / 3 VAN 3</span><h1>${title}</h1><p>${text}</p><div class="beach-scene"><span class="beach-sun"></span><span class="beach-person"></span><span class="coconut">◒</span></div>${button("ending-next", "Blijf het universum verkennen")}<span class="ending-credit">PROJECT X · TREVINO RIZKY SUNARJA<br>PERSOONLIJK EXCALIBUR-PROJECT</span></div>`,
+          "ending",
+          true,
+        );
       this.bind("ending-next", () => {
         i++;
         if (i < scenes.length) next();

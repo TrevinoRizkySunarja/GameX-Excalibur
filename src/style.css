@@ -309,7 +309,7 @@ kbd {
   height: 100%;
   position: absolute;
   inset: 0;
-  image-rendering: pixelated;
+  image-rendering: auto;
   outline: none;
 }
 .world-vignette {

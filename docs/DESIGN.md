@@ -4,7 +4,7 @@
 
 **Explore → meet an NPC or discover a target → activate the Omni-Tool → receive a random hack task → complete it → change the world or damage an enemy → collect loot and story information → upgrade and travel.**
 
-The focus is on making the team's agreed concept tangible. The prototype is a separate Excalibur implementation, not an alternative engine choice for the actual Godot project.
+This is the personal Excalibur adventure. Its repository and development remain independent of the school project in Godot.
 
 ## The narrative
 
@@ -59,7 +59,7 @@ In the arena, a failed task or expired timer produces a counterattack. The playe
 
 The expanded build proves the loop with three 3072 × 2048 worlds and sixteen tasks. The other nine destinations remain concepts. It does not implement seamless space flight, multiplayer, large branching cutscenes or a live-service endgame.
 
-Each world uses a detailed generated background with authored collision and navigation rectangles. Foreground residents, ships, enemies and interactions remain live Excalibur actors. The paintings do not provide a destructible world, interior maps or automatic foreground occlusion. These are visual prototypes rather than production tile sets for Godot.
+Each world uses an authored Canvas illustration driven by the existing navigation rectangles. Foreground residents, ships, enemies and interactions remain live Excalibur actors. The maps do not yet provide destructible buildings, interiors or automatic foreground occlusion. Old generated paintings are retained only as reference.
 
 Eighteen residents follow short routes and stop while the player approaches. Quest givers remember acceptance, repairs and claimed rewards in the existing save. Completed main-story and loot IDs remain compatible with the earlier prototype.
 
@@ -117,3 +117,9 @@ Combined with the first four quests this gives thirteen sidequests, in addition 
 Rhea, Yui and Dr. Vale run local shops. Sol, Taro and ECHO walk longer district routes and stop when approached. All six offer their own Chip selection and sell repairs. They buy valuable cargo, but never consume quest completion data. Inventory is finite per unique Chip rather than a real-time rotating shop schedule.
 
 The equipment screen (I) holds two special Chip slots. It displays the resulting battle damage, bonus hack time and counterattack protection. Equipment, cargo and quest claims persist in browser saves. The random hack selection pool stays unchanged by equipment.
+
+## Cinematic presentation and group encounters
+
+The opening is a six-panel manga sequence: farewell, boarding, goodbye through the window, capture by De Gebroken Zon, escape, then the discovery of the Omni-Tool years later. Important NPC dialogues use illustrated or world-backed stages, original animated mouth/eye layers and Dutch subtitles. Advancement never chooses a KAGE outcome automatically. Opening replay is available on the ship.
+
+Each of NEON, KAGE and CITADEL has a three-member enemy gang. The player can switch targets between hacks. A failed hack takes the selected enemy’s damage plus two for each other living enemy, reduced by equipped protection. Killing a support unit reduces pressure; the encounter completes only after every member is gone. Victory grants the original enemy reward plus eight Stars and one bolt per additional member, and two salvage items. Retreated encounters reset enemy health; player damage remains saved. Existing enemy IDs still represent complete encounters, keeping sidequest and save compatibility.

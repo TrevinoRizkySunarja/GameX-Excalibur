@@ -71,7 +71,7 @@ async function solve(page) {
 }
 async function start(page) {
   await page.locator("#new-game").click();
-  for (let i = 0; i < 3; i++) await page.locator("#story-next").click();
+  for (let i = 0; i < 6; i++) await page.locator("#story-next").click();
   await page.locator("#tool-tutorial").click();
   await solve(page);
   await page.locator("#dialogue-next").click();
@@ -94,6 +94,15 @@ async function interaction(page, id) {
   await expect(page.locator("#prompt")).toBeVisible();
   await expect(page.locator("#prompt span")).toHaveText(hint);
   await page.keyboard.press("e");
+  if (id.endsWith("-boss")) {
+    await page.waitForFunction(() =>
+      ["cinematic", "encounter", "battle"].includes(
+        window.__PROJECTX__.modalType,
+      ),
+    );
+    if (await page.locator("#dialogue-next").count())
+      await page.locator("#dialogue-next").click();
+  }
 }
 async function boss(page, id) {
   await interaction(page, id);
@@ -278,7 +287,15 @@ test("movement, pause, proximity interaction and persistent loot work", async ({
     () => window.__PROJECTX__.engine.currentScene.player.pos.x,
   );
   await page.keyboard.down("d");
-  await page.waitForTimeout(400);
+  await expect
+    .poll(
+      () =>
+        page.evaluate(
+          () => window.__PROJECTX__.engine.currentScene.player.pos.x,
+        ),
+      { timeout: 5000 },
+    )
+    .toBeGreaterThan(before + 30);
   await page.keyboard.up("d");
   const after = await page.evaluate(
     () => window.__PROJECTX__.engine.currentScene.player.pos.x,
