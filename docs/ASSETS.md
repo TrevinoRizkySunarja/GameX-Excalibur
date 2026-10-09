@@ -9,7 +9,7 @@
 
 The raster images were generated for this project, then encoded as WebP for smaller downloads. Their underlying source compositions were not changed during that format conversion.
 
-## Expanded world paintings
+## Archived world paintings
 
 Generated with the built-in image-generation tool for this update. Each original is 1536 × 1024, encoded to WebP at quality 93 and displayed at 2× with nearest-neighbor sampling. No characters or UI are baked into the world paintings. Walkable areas and object positions are separately authored in `src/levels.js`.
 
@@ -23,8 +23,9 @@ Shared prompt constraints: original detailed top-down pixel-art game map; legibl
 
 ## Runtime artwork
 
-- `src/art.js`: background painting renderer, weather, walking residents, player walking animation, drones, mechs, terminals, caches, Stars pickups and the Wayfarer sprite, drawn with Canvas.
-- `src/sprites.js`: layered pixel characters and robots with clothing seams, boots, facial shading, backpacks and the glowing Omni-Tool.
+- `src/art.js`, `src/world-renderer.js`, `src/entities.js`: authored map illustration, weather, smooth walking residents, player animation, drones, terminals, caches, Stars pickups and the Wayfarer, drawn with Canvas.
+- `src/sprites.js`: archived pixel character drawing, retained as reference.
+- `src/characters.js`: transparent illustrated portrait frames for human speakers and SVG speech-light layers for robots.
 - `src/ui.js`: small interface icons, a stylized mech, and portrait atlas positioning.
 - `src/style.css`: original ship silhouette, planets, orbital station, hacking visualizations, and the epilogue beach composition.
 - `public/icon.svg`: original Project X favicon.
@@ -33,3 +34,7 @@ Shared prompt constraints: original detailed top-down pixel-art game map; legibl
 ## Fonts
 
 Barlow Condensed and DM Sans are self-hosted through the Fontsource npm packages. The game does not need Google Fonts or an external font request at runtime. Font license texts are available in the installed Fontsource package folders. Excalibur and all other package dependencies retain their own licenses.
+
+## Current illustrated maps and manga panels
+
+Current gameplay maps are drawn by `src/world-renderer.js` rather than loaded from the archived paintings. `src/entities.js` draws the smooth world actors. See [ART_DIRECTION.md](ART_DIRECTION.md) for all twelve manga panel paths, exact generation prompts, the original pirate emblem and the animated portrait layers.

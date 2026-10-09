@@ -1,4 +1,4 @@
-// Coordinates are authored against the 1536 × 1024 paintings, then scaled ×2.
+// Shared map and navigation coordinates use a 1536 × 1024 layout, scaled ×2.
 // Walkable rectangles describe ground and bridge decks; roofs and water stay solid.
 const layouts = {
   neon: {

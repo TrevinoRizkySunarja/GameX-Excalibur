@@ -213,7 +213,12 @@ export class PlanetScene extends ex.Scene {
         a = new ex.Actor({ pos: ex.vec(obj.x, obj.y), width: 32, height: 32 });
         a.data = { obj };
         a.graphics.use(
-          entityGraphic(obj, this.planet, () => this.nearest?.id === obj.id),
+          entityGraphic(
+            obj,
+            this.planet,
+            () => this.nearest?.id === obj.id,
+            () => !!this.controller.state.flags["solved_" + obj.id],
+          ),
         );
         a.graphics.anchor = ex.vec(0.5, 0.59);
         if (obj.type === "ship") a.graphics.current.scale = ex.vec(2, 2);
@@ -307,14 +312,14 @@ export class PlanetScene extends ex.Scene {
   }
 }
 export async function createEngine(controller) {
-  await loadWorldArt();
+  await loadWorldArt(Object.values(WORLDS));
   const game = new ex.Engine({
     canvasElementId: "world-canvas",
     width: 960,
     height: 600,
     displayMode: ex.DisplayMode.FitContainerAndFill,
     backgroundColor: ex.Color.fromHex("#0a131b"),
-    antialiasing: false,
+    antialiasing: true,
     suppressPlayButton: true,
     suppressConsoleBootMessage: true,
     pointerScope: ex.PointerScope.Canvas,
