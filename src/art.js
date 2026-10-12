@@ -2,19 +2,20 @@ import * as ex from "excalibur";
 import { worldMapCanvas, loadScenery } from "./world-renderer.js";
 import { cleanEntityGraphic, drawAvatar } from "./entities.js";
 import { CHARACTERS, characterFor } from "./story.js";
+import { loadEnemyArt } from "./enemies.js";
 
 export async function loadWorldArt(worlds) {
-  await loadScenery();
+  await Promise.all([loadScenery(), loadEnemyArt()]);
   for (const world of worlds) worldMapCanvas(world);
 }
-export function floorGraphic(world) {
+export function floorGraphic(world, slice = { x: 0, y: 0, width: world.width, height: world.height }) {
   return new ex.Canvas({
-    width: world.width,
-    height: world.height,
+    width: slice.width,
+    height: slice.height,
     cache: true,
     draw(ctx) {
       ctx.imageSmoothingEnabled = true;
-      ctx.drawImage(worldMapCanvas(world), 0, 0);
+      ctx.drawImage(worldMapCanvas(world), slice.x / 2, slice.y / 2, slice.width / 2, slice.height / 2, 0, 0, slice.width, slice.height);
     },
   });
 }
@@ -64,7 +65,7 @@ export function citizenGraphic(actor, obj, world, getActive) {
       };
       const [coat, light] =
         colors[obj.style] || colors[world.id === "kage" ? "green" : "amber"];
-      const look = CHARACTERS[characterFor(obj.name, obj.portrait)];
+      const look = obj.ambient ? undefined : CHARACTERS[obj.character || characterFor(obj.name, obj.portrait)];
       ctx.fillStyle = "#0008";
       ctx.beginPath();
       ctx.ellipse(x, y + 9, 17, 6, 0, 0, Math.PI * 2);
@@ -74,13 +75,13 @@ export function citizenGraphic(actor, obj, world, getActive) {
         light,
         accent: look?.accent || world.accent,
         kind: look?.kind,
-        skin: look?.skin,
+        skin: obj.skin || look?.skin,
         facing: actor.facing,
         step,
-        robe: world.id === "kage",
+        robe: (world.theme || world.id) === "kage",
         elder: obj.id === "ren",
         robot: obj.style === "robot",
-        hair: look?.hair,
+        hair: obj.hair || look?.hair,
       });
       if (getActive()) {
         ctx.font = "bold 11px monospace";
@@ -117,7 +118,7 @@ export function weatherGraphic(world, controller) {
       ctx.clearRect(0, 0, 1600, 1000);
       if (controller.paused) return;
       const t = performance.now() / 1000;
-      if (world.id === "neon") {
+      if ((world.theme || world.id) === "neon") {
         ctx.strokeStyle = "#87bdd337";
         ctx.lineWidth = 1;
         for (let i = 0; i < 90; i++) {
@@ -132,7 +133,7 @@ export function weatherGraphic(world, controller) {
         for (let i = 0; i < 26; i++) {
           const x = (i * 173 + t * 18) % 1600,
             y = (i * 139 + t * 25) % 1000;
-          ctx.fillStyle = world.id === "kage" ? "#eebbce7a" : "#f68d5a68";
+          ctx.fillStyle = (world.theme || world.id) === "kage" ? "#eebbce7a" : "#f68d5a68";
           ctx.fillRect(
             x + Math.sin(t + i) * 9,
             y,

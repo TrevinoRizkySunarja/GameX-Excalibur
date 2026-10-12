@@ -7,6 +7,7 @@ import "@fontsource/dm-sans/latin-600.css";
 import "@fontsource/dm-sans/latin-700.css";
 import "./style.css";
 import "./cinematics.css";
+import "./expansion.css";
 import { createEngine } from "./world.js";
 import {
   freshState,
@@ -45,7 +46,10 @@ import {
   salvageDrop,
 } from "./progression.js";
 import { HACKS } from "./hack-catalog.js";
-import { click, success, setAudio } from "./audio.js";
+import { click, success, setAudio, audioSettings, audioStatus, updateAudioSettings, unlockAudio, setSoundscape, lootSound, reducedEffects } from "./audio.js";
+import { DUNGEONS, requirementsMet, dungeonGoals } from "./expansion.js";
+import { npcFrames, MAIN_CONVERSATIONS, dungeonIntro, extraBossIntro } from "./conversations.js";
+import { enemyMarkup, enemyForm, showBattleEffect } from "./enemies.js";
 import { icon, portrait, button, mech } from "./ui.js";
 import { worldMapURL } from "./world-renderer.js";
 import {
@@ -71,10 +75,10 @@ import {
 
 const app = document.querySelector("#app");
 app.innerHTML = `<div class="game-shell">
-  <nav class="rail" aria-label="Game menu"><a class="brand-mark" href="#" aria-label="Project X">X<span>·</span></a><div class="rail-middle"><button id="nav-map" title="Bestemmingen (M)">${icon("orbit")}</button><button id="nav-journal" title="Logboek (J)">${icon("journal")}</button><button id="nav-equipment" title="Chips & cargo (I)">${icon("tool")}</button><button id="nav-ship" title="Schip & upgrades">${icon("ship")}</button></div><button id="nav-sound" title="Geluid aan/uit" aria-pressed="true">${icon("sound")}</button><span class="rail-label">EXCALIBUR / 01</span></nav>
+  <nav class="rail" aria-label="Game menu"><a class="brand-mark" href="#" aria-label="Project X">X<span>·</span></a><div class="rail-middle"><button id="nav-map" title="Bestemmingen (M)">${icon("orbit")}</button><button id="nav-journal" title="Logboek (J)">${icon("journal")}</button><button id="nav-equipment" title="Chips & cargo (I)">${icon("tool")}</button><button id="nav-ship" title="Schip & upgrades">${icon("ship")}</button><button id="nav-settings" title="Geluid, ondertitels & effecten (P)">${icon("settings")}</button></div><button id="nav-sound" title="Geluid aan/uit" aria-pressed="true">${icon("sound")}</button><span class="rail-label">EXCALIBUR / 01</span></nav>
   <div class="main-shell"><header class="topbar"><div class="wordmark">PROJECT <b>X</b><span>QUANTUM SHIFT</span></div><div class="live-label"><i></i> PLAYABLE PROTOTYPE</div><div class="wallet"><span title="Stars">${icon("star")}<b id="stars">0</b></span><span title="Bouten">${icon("bolt")}<b id="bolts">0</b></span><span title="Softwarechips">${icon("tool")}<b id="chips">0</b></span></div></header>
   <main class="play-layout"><section class="viewport" aria-label="Speelwereld"><canvas id="world-canvas" aria-label="Top-down speelwereld"></canvas><div class="world-vignette"></div><div class="world-top"><div class="chapter-tag"><i></i><span id="world-tag">NEON / CHAPTER 01</span></div><span class="coordinate">SECTOR // <span id="coordinates">000 : 000</span></span></div><div id="district-name" class="district-label">Wayfarer Dock</div><button id="local-map-button" class="world-map-button">STADSKAART <kbd>L</kbd></button><div id="prompt" class="interact-prompt" hidden><kbd>E</kbd><span></span></div><div class="world-bottom"><div class="health-cluster"><span>VITAAL SIGNAAL <b id="hp-text">100 / 100</b></span><div class="health-meter"><i id="hp-fill"></i></div><div class="controls"><span><kbd>WASD</kbd> bewegen</span><span><kbd>SPATIE</kbd> dash</span><span><kbd>E</kbd> interactie</span></div></div><div class="radar" title="Positie en volgend doel"><div class="radar-grid"></div><i id="radar-player"></i><b id="radar-target"></b><span>SCAN / LIVE</span></div></div><div id="toast" class="toast" role="status"></div><div id="loading" class="loading">Omni-Link synchroniseren…</div></section>
-  <aside class="mission-panel"><span class="eyebrow">ACTIEVE BESTEMMING</span><h1 id="world-title">NEON</h1><p id="world-subtitle"></p><div class="chapter-progress"><span class="active"></span><span></span><span></span></div><div class="mission-card"><span class="eyebrow">HOOFDMISSIE</span><h2 id="mission-title">Het eerste spoor</h2><p id="mission-text"></p><button id="mission-journal">Bekijk logboek ${icon("arrow")}</button></div><div class="tool-dossier"><div class="tool-orb">${icon("tool")}</div><div><span class="eyebrow">OMNI-TOOL</span><h3>Herschrijf de realiteit.</h3></div><p>Een willekeurige opdracht.<br>Eén geslaagde hack.<br>Een wereld die reageert.</p><div class="signal-row"><i></i><span id="tool-status">LINK OFFLINE</span></div></div><div class="field-note"><span class="eyebrow">VELDNOTITIE</span><p id="field-note"></p></div><span class="prototype-note">3 speelbare chapters · 12 conceptbestemmingen<br>16 hackminigames · uitgebreide werelden</span></aside></main>
+  <aside class="mission-panel"><span class="eyebrow">ACTIEVE BESTEMMING</span><h1 id="world-title">NEON</h1><p id="world-subtitle"></p><div class="chapter-progress"><span class="active"></span><span></span><span></span></div><div class="mission-card"><span class="eyebrow">HOOFDMISSIE</span><h2 id="mission-title">Het eerste spoor</h2><p id="mission-text"></p><button id="mission-journal">Bekijk logboek ${icon("arrow")}</button></div><div class="tool-dossier"><div class="tool-orb">${icon("tool")}</div><div><span class="eyebrow">OMNI-TOOL</span><h3>Herschrijf de realiteit.</h3></div><p>Een willekeurige opdracht.<br>Eén geslaagde hack.<br>Een wereld die reageert.</p><div class="signal-row"><i></i><span id="tool-status">LINK OFFLINE</span></div></div><div class="field-note"><span class="eyebrow">VELDNOTITIE</span><p id="field-note"></p></div><span class="prototype-note">3 chapters · 4 dungeons · 25 sidequests<br>9 bosses · 20 willekeurige hacks</span></aside></main>
   <footer class="statusbar"><span>DE WAYFARER <i>/</i> JOURNEY LOG <b id="hacks-count">0 HACKS</b></span><span id="save-status">LOKALE VOORTGANG</span><button id="help-button">BEDIENING</button></footer></div></div><div id="overlay" class="overlay" hidden></div>`;
 
 export class ProjectX {
@@ -87,8 +91,13 @@ export class ProjectX {
     this.battle = null;
     this.modalType = "";
     this.toastTimer = null;
-    this.soundOn = true;
+    this.soundOn = audioSettings().enabled;
+    updateAudioSettings({});
+    this.dungeon = null;
+    this.returnPoint = null;
+    this.resultTimer = null;
   }
+  activeWorld() { return DUNGEONS[this.dungeon] || WORLDS[this.state.world]; }
   save() {
     const ok = writeSave(this.state);
     document.querySelector("#save-status").textContent = ok
@@ -98,7 +107,7 @@ export class ProjectX {
   }
   refresh() {
     const s = this.state,
-      w = WORLDS[s.world];
+      w = this.activeWorld();
     for (const key of ["stars", "bolts", "chips"])
       document.querySelector(`#${key}`).textContent =
         key === "chips" ? s.chips + s.ownedChips.length : s[key];
@@ -113,10 +122,10 @@ export class ProjectX {
       kage: "De prijs van evenwicht",
       citadel: "Bloed & code",
     }[s.world];
-    document.querySelector("#mission-text").textContent = missionFor(
-      s,
-      s.world,
-    );
+    document.querySelector("#mission-text").textContent = w.dungeon
+      ? dungeonGoals(s, w).find(g => !g.done)?.label || "De kernschat is veilig. Keer terug naar de drempel."
+      : missionFor(s, s.world);
+    if (w.dungeon) document.querySelector("#mission-title").textContent = w.name;
     document.querySelector("#field-note").textContent = {
       neon: "Ilo weet meer over de piratenroute. Op NEON heeft informatie altijd een prijs.",
       kage: "Ren en Kaito willen hetzelfde: vrijheid. De prijs die ze daarvoor willen betalen verschilt.",
@@ -131,6 +140,9 @@ export class ProjectX {
       .querySelectorAll(".chapter-progress span")
       .forEach((el, i) => el.classList.toggle("active", i < Number(w.chapter)));
     document.documentElement.style.setProperty("--world-accent", w.accent);
+    document.documentElement.dataset.theme = s.world;
+    document.documentElement.style.setProperty("--accent", w.accent);
+    setSoundscape(s.world, this.modalType.startsWith("battle") || this.modalType === "encounter" ? "battle" : "explore");
     this.engine?.currentScene.refresh?.();
   }
   toast(text) {
@@ -146,7 +158,7 @@ export class ProjectX {
     if (obj) el.querySelector("span").textContent = obj.hint;
   }
   updateRadar(pos, target) {
-    const world = WORLDS[this.state.world];
+    const world = this.activeWorld();
     const district = world.districts.reduce((a, b) =>
       Math.hypot(a.x - pos.x, a.y - pos.y) <
       Math.hypot(b.x - pos.x, b.y - pos.y)
@@ -163,22 +175,24 @@ export class ProjectX {
     document.querySelector("#coordinates").textContent =
       `${Math.round(pos.x)} : ${Math.round(pos.y)}`;
     const dot = document.querySelector("#radar-player");
-    dot.style.left = `${(pos.x / WORLDS[this.state.world].width) * 100}%`;
-    dot.style.top = `${(pos.y / WORLDS[this.state.world].height) * 100}%`;
+    dot.style.left = `${(pos.x / world.width) * 100}%`;
+    dot.style.top = `${(pos.y / world.height) * 100}%`;
     const goal = document.querySelector("#radar-target");
     goal.hidden = !target;
     if (target) {
-      goal.style.left = `${(target.x / WORLDS[this.state.world].width) * 100}%`;
-      goal.style.top = `${(target.y / WORLDS[this.state.world].height) * 100}%`;
+      goal.style.left = `${(target.x / world.width) * 100}%`;
+      goal.style.top = `${(target.y / world.height) * 100}%`;
     }
   }
   modal(html, type = "dialogue", wide = false) {
+    clearTimeout(this.resultTimer);
     this.cinematicCleanup?.();
     this.cinematicCleanup = null;
     this.hackCleanup?.();
     this.hackCleanup = null;
     this.paused = true;
     this.modalType = type;
+    setSoundscape(this.state.world, type.startsWith("battle") || type === "encounter" ? "battle" : "explore");
     this.setPrompt(null);
     const el = document.querySelector("#overlay");
     el.hidden = false;
@@ -192,6 +206,7 @@ export class ProjectX {
     );
   }
   close() {
+    clearTimeout(this.resultTimer);
     this.cinematicCleanup?.();
     this.cinematicCleanup = null;
     this.hackCleanup?.();
@@ -242,12 +257,35 @@ export class ProjectX {
     this.cinematicCleanup = mountSubtitle(frame);
     this.bind("dialogue-next", action);
   }
+  conversation(frames, actionText = "Tot ziens", action = () => this.close(), finalExtras = null) {
+    let index = 0;
+    const show = () => {
+      const current = frames[index], last = index === frames.length - 1;
+      this.modal(cinematicMarkup(current, this.activeWorld(), { counter: `${index + 1} / ${frames.length}`, action: last ? actionText : "Verder" }), "cinematic", true);
+      this.cinematicCleanup = mountSubtitle(current);
+      const history = this.state.dialogueHistory;
+      if (history.at(-1)?.text !== current.text) history.push({speaker: current.speaker, text: current.text});
+      this.state.dialogueHistory = history.slice(-60);
+      writeSave(this.state);
+      this.bind("dialogue-next", () => { if (last) action(); else { index++; show(); } });
+      document.querySelector(".dialogue-actions").insertAdjacentHTML("beforeend", '<button id="conversation-log" class="button ghost">Lees gesprek terug</button>');
+      this.bind("conversation-log", () => this.dialogueLog(show));
+      if(last) finalExtras?.();
+    };
+    show();
+  }
+  dialogueLog(back = () => this.journal()) {
+    const escape = value => String(value).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]);
+    this.modal(`${this.header("ONDERTITELS / GESPREKSGESCHIEDENIS", "Wat er gezegd werd.")}<div class="dialogue-history">${this.state.dialogueHistory.map(f => `<article><strong>${escape(f.speaker)}</strong><p>${escape(f.text)}</p></article>`).join("") || "<p>Start een gesprek om ondertitels hier terug te lezen.</p>"}</div>${button("back-conversation", "Terug naar het gesprek", "ghost")}`, "transcript", true);
+    this.closeButton(back); this.bind("back-conversation", back);
+  }
   title() {
     this.modal(
-      `<div class="title-art"></div><div class="title-shade"></div><div class="title-content"><div class="title-kicker"><i></i> PROJECT X / EXCALIBUR PROTOTYPE</div><h1>HACK THE<br><em>IMPOSSIBLE.</em></h1><p>Een verloren familie. Een gestolen universum.<br>Eén tool die de realiteit kan herschrijven.</p><div class="title-buttons">${this.state.started ? button("resume", "Hervat je reis " + icon("arrow")) : button("new-game", "Begin je reis " + icon("arrow"))}${this.state.started ? button("new-game", "Nieuwe reis", "ghost") : ""}</div><div class="title-stats"><span><b>03</b> SPEELBARE CHAPTERS</span><span><b>${MINIGAMES.length}</b> RANDOM HACKS</span><span><b>01</b> OMNI-TOOL</span></div><div class="title-footer"><span>TOP-DOWN SCI-FI ADVENTURE</span><span>WASD / MUIS / E</span></div></div><div class="title-art-credit">ORIGINELE CONCEPTART · PROJECT X</div>`,
+      `<div class="title-art"></div><div class="title-shade"></div><div class="title-content"><div class="title-kicker"><i></i> PROJECT X / EXCALIBUR PROTOTYPE</div><h1>HACK THE<br><em>IMPOSSIBLE.</em></h1><p>Een verloren familie. Een gestolen universum.<br>Eén tool die de realiteit kan herschrijven.</p><div class="title-buttons">${this.state.started ? button("resume", "Hervat je reis " + icon("arrow")) : button("new-game", "Begin je reis " + icon("arrow"))}${this.state.started ? button("new-game", "Nieuwe reis", "ghost") : ""}${button("title-settings", "Geluid & ondertitels", "ghost")}</div><div class="title-stats"><span><b>03</b> SPEELBARE CHAPTERS</span><span><b>${MINIGAMES.length}</b> RANDOM HACKS</span><span><b>01</b> OMNI-TOOL</span></div><div class="title-footer"><span>TOP-DOWN SCI-FI ADVENTURE</span><span>WASD / MUIS / E</span></div></div><div class="title-art-credit">ORIGINELE CONCEPTART · PROJECT X</div>`,
       "title",
       true,
     );
+    this.bind("title-settings", () => this.settings(() => this.title()));
     this.bind("resume", () => (this.state.tool ? this.close() : this.ship()));
     this.bind("new-game", () => {
       if (this.state.started) {
@@ -262,6 +300,7 @@ export class ProjectX {
     });
   }
   newGame() {
+    this.dungeon = null; this.returnPoint = null;
     this.state = freshState();
     this.state.started = true;
     this.save();
@@ -303,6 +342,7 @@ export class ProjectX {
     next();
   }
   ship() {
+    if (this.dungeon) { this.exitDungeon(() => this.ship()); return; }
     this.modal(
       `${this.header("JE SCHIP / VEILIGE HUB", "De Wayfarer")}<div class="ship-layout"><div class="ship-visual"><div class="ship-illustration"><span class="ship-wing left"></span><span class="ship-wing right"></span><span class="ship-hull"></span><span class="ship-glass"></span><span class="ship-engine left"></span><span class="ship-engine right"></span></div><span>WF—07 / CARGO EXPLORER</span><div class="ship-status">${this.state.tool ? "OMNI-TOOL VERBONDEN" : "ONBEKEND PROTOTYPE IN VRACHTRUIM"}</div></div><div class="ship-copy"><span class="eyebrow">BOORDCOMPUTER / ARI</span><h2>${this.state.tool ? "Welkom terug, reiziger." : "Er ligt iets op je te wachten."}</h2><p>${this.state.tool ? "Hier ben je veilig. Herstel je signaal, verbeter je hardware en kies je volgende bestemming." : "De kist van je ouders bevat een Omni-Tool. Maak eerst één oefenverbinding. De opdracht wordt willekeurig gekozen; het doel is de tool activeren."}</p><div class="button-stack">${this.state.tool ? button("ship-destinations", "Open bestemmingen " + icon("orbit")) : button("tool-tutorial", "Activeer de Omni-Tool " + icon("tool"))}${this.state.tool ? button("ship-repair", "Gratis herstellen", "ghost") + button("ship-shop", "Stars uitgeven & upgraden", "ghost") : ""}</div><p class="small-note">Bouten verbeteren hardware. Chips versterken hacks.<br>Stars gebruik je om te handelen.</p></div></div>`,
       "ship",
@@ -368,6 +408,7 @@ export class ProjectX {
   }
   async travel(id) {
     if (!availableDestinations(this.state).includes(id)) return;
+    this.dungeon = null; this.returnPoint = null;
     this.state.world = id;
     this.state.hp = 100;
     this.save();
@@ -376,7 +417,7 @@ export class ProjectX {
       "travel",
     );
     try {
-      await this.engine.goToScene(id);
+      if (this.engine.currentScene.id !== id) await this.engine.goToScene(id);
       const scene = this.engine.currentScene;
       scene.player.pos.x = WORLDS[id].spawn[0];
       scene.player.pos.y = WORLDS[id].spawn[1];
@@ -404,12 +445,61 @@ export class ProjectX {
       } else this.close();
     }, 650);
   }
+  dungeonDoor(id) {
+    const d = DUNGEONS[id];
+    if (!d || d.theme !== this.state.world) return;
+    const c = CHIP_LIBRARY[d.chip];
+    this.modal(`${this.header(d.theme.toUpperCase() + " / DUNGEON", d.name)}<div class="dungeon-preview"><img src="${import.meta.env.BASE_URL}art/story/dungeon-${d.theme}.webp" alt="${d.name}"/><div><span class="eyebrow">${c.rarity.toUpperCase()} KERNSCHAT</span><h2>${d.subtitle}</h2><p>Versla de wachtergroep, herschrijf twee zegels en breek de bosskern. Halverwege het gevecht ontwaakt een tweede fase. Installeer upgrades en herstel je HP voordat je vertrekt.</p><p><strong>${c.name}</strong> · ${c.description}</p><p class="small-note">Je voortgang en de eenmalige noodvoorraad blijven bewaard. Je kunt altijd via de drempel terug.</p></div></div><div class="dungeon-objectives">${dungeonGoals(this.state, d).map(g => `<span class="${g.done ? "done" : ""}">${g.done ? "✓" : "○"} ${g.label}</span>`).join("")}</div><div class="button-row">${button("enter-dungeon", "Betreed de dungeon " + icon("arrow"))}${button("dungeon-equipment", "Controleer mijn Chips", "ghost")}</div>`, "dungeon-door", true);
+    this.closeButton(); this.bind("dungeon-equipment", () => this.equipment());
+    this.bind("enter-dungeon", () => this.enterDungeon(id));
+  }
+  async enterDungeon(id) {
+    const d = DUNGEONS[id];
+    if (!d || this.dungeon || d.theme !== this.state.world || !this.state.tool) return;
+    const p = this.engine.currentScene.player.pos;
+    this.returnPoint = { x: p.x, y: p.y };
+    this.dungeon = id;
+    this.modal(`<div class="landing-transmission"><span class="eyebrow">OMNI-LINK / DUNGEON</span><h1>${d.name}</h1><div class="landing-line"></div><p>Beveiligingslagen analyseren…</p></div>`, "travel");
+    try {
+      await this.engine.goToScene(id);
+      const scene=this.engine.currentScene;
+      scene.player.pos.x=d.spawn[0]; scene.player.pos.y=d.spawn[1];
+      this.battle=null; this.refresh();
+      if(!this.state.flags[`visited_dungeon_${id}`]) {
+        this.state.flags[`visited_dungeon_${id}`]=true; this.save();
+        this.conversation(dungeonIntro(d), "Onderzoek de drempel", () => this.close());
+      } else this.close();
+    } catch(e) { console.error(e); await this.exitDungeon(); this.toast("De dungeon kon niet worden geladen."); }
+  }
+  async exitDungeon(after = () => this.close()) {
+    if(!this.dungeon){after();return;}
+    this.dungeon=null;
+    const point=this.returnPoint || {x:WORLDS[this.state.world].spawn[0], y:WORLDS[this.state.world].spawn[1]};
+    this.returnPoint=null;
+    this.modal(`<div class="landing-transmission"><h1>Terug naar ${WORLDS[this.state.world].name}</h1><div class="landing-line"></div></div>`, "travel");
+    await this.engine.goToScene(this.state.world);
+    const p=this.engine.currentScene.player;
+    p.pos.x=point.x; p.pos.y=point.y; p.path=[]; p.destination=null;
+    this.refresh(); after();
+  }
+  claimRelic(obj) {
+    if(!requirementsMet(this.state,obj)) { this.toast(obj.clue || "De kluis blijft gesloten. Versla eerst de bosskern."); return; }
+    if(this.state.collected.includes(obj.id))return;
+    this.state.collected.push(obj.id);
+    const c=CHIP_LIBRARY[obj.chip], found=acquireChip(this.state,obj.chip);
+    grant(this.state,{stars:75,bolts:5});
+    record(this.state, `${c.rarity} kernschat gevonden: ${c.name} in ${this.activeWorld().name}.`);
+    this.save();lootSound(c.rarity);
+    this.modal(`<div class="relic-reveal" data-rarity="${c.rarity.toLowerCase()}" style="--chip:${c.color}"><div class="relic-rays"></div><span class="eyebrow">GEHEIM ONTSLOTEN / ${c.rarity.toUpperCase()}</span><div class="relic-chip">${icon("tool")}</div><h1>${c.name}</h1><p>${c.description}</p><p>+75 Stars · +5 bouten${found ? " · nieuwe Omni-Tool-chip" : " · +30 Stars voor dubbele chip"}</p><div class="button-row">${button("relic-equipment","Installeer in de Omni-Tool")}${button("relic-close","Verder verkennen","ghost")}</div></div>`, "relic", true);
+    this.bind("relic-equipment",()=>{this.battle=null;this.equipment();});this.bind("relic-close",()=>this.close());
+  }
   localMap() {
-    const w = WORLDS[this.state.world],
+    const w = this.activeWorld(),
       scene = this.engine.currentScene;
     const objects = w.objects.filter(
       (o) =>
         o.type !== "loot" &&
+        !o.hidden &&
         !this.state.collected.includes(o.id) &&
         !this.state.defeated.includes(o.id),
     );
@@ -428,6 +518,11 @@ export class ProjectX {
       true,
     );
     this.closeButton();
+    if(!w.dungeon) {
+      const beacons=w.objects.filter(o=>o.type==="beacon");
+      document.querySelector(".panel").insertAdjacentHTML("beforeend", `<div class="beacon-grid"><span class="eyebrow">LOKAAL REISNETWERK / ONTDEK EERST HET BAKEN</span>${beacons.map(o=>`<button class="button ghost" data-jump-beacon="${o.id}" ${this.state.flags[`beacon_${o.id}`]?"":"disabled"}>${o.name}</button>`).join("")}</div>`);
+      document.querySelectorAll("[data-jump-beacon]").forEach(b=>b.onclick=()=>this.jumpBeacon(b.dataset.jumpBeacon));
+    }
     document.querySelectorAll("[data-map-object]").forEach(
       (b) =>
         (b.onclick = () => {
@@ -487,7 +582,7 @@ export class ProjectX {
         .map(([id, c]) => {
           const owned = s.ownedChips.includes(id),
             active = s.equippedChips.includes(id);
-          return `<article class="chip-card ${owned ? "" : "locked"} ${active ? "equipped" : ""}" style="--chip:${c.color}"><div class="chip-art">${icon("tool")}<span>PX / ${id.slice(0, 3).toUpperCase()}</span></div><span class="eyebrow">${c.rarity}${active ? " / ACTIEF" : ""}</span><h3>${c.name}</h3><p>${c.description}</p><button class="button ${active ? "accent" : "ghost"}" data-equip-chip="${id}" ${owned ? "" : "disabled"}>${!owned ? "Nog te vinden" : active ? "Verwijder uit slot" : "Installeer chip"}</button></article>`;
+          return `<article data-rarity="${c.rarity.toLowerCase()}" class="chip-card ${owned ? "" : "locked"} ${active ? "equipped" : ""}" style="--chip:${c.color}"><div class="chip-art">${icon("tool")}<span>PX / ${id.slice(0, 3).toUpperCase()}</span></div><span class="eyebrow">${c.rarity}${active ? " / ACTIEF" : ""}</span><h3>${c.name}</h3><p>${c.description}</p>${c.source ? `<small class="chip-source">${c.source}</small>` : ""}<button class="button ${active ? "accent" : "ghost"}" data-equip-chip="${id}" ${owned ? "" : "disabled"}>${!owned ? "Nog te vinden" : active ? "Verwijder uit slot" : "Installeer chip"}</button></article>`;
         })
         .join(
           "",
@@ -528,7 +623,7 @@ export class ProjectX {
         .map((id) => {
           const c = CHIP_LIBRARY[id],
             owned = s.ownedChips.includes(id);
-          return `<article class="chip-card" style="--chip:${c.color}"><div class="chip-art">${icon("tool")}<span>${c.rarity.toUpperCase()}</span></div><h3>${c.name}</h3><p>${c.description}</p><button class="button accent" data-buy-special="${id}" ${owned ? "disabled" : ""}>${owned ? "In je collectie" : c.price + " Stars"}</button></article>`;
+          return `<article data-rarity="${c.rarity.toLowerCase()}" class="chip-card" style="--chip:${c.color}"><div class="chip-art">${icon("tool")}<span>${c.rarity.toUpperCase()}</span></div><h3>${c.name}</h3><p>${c.description}</p><button class="button accent" data-buy-special="${id}" ${owned ? "disabled" : ""}>${owned ? "In je collectie" : c.price + " Stars"}</button></article>`;
         })
         .join(
           "",
@@ -602,6 +697,12 @@ export class ProjectX {
       true,
     );
     this.closeButton();
+    document.querySelector(".panel").insertAdjacentHTML("beforeend", `<h2>Dungeons & kernschatten</h2><div class="dungeon-ledger">${Object.values(DUNGEONS).map(d => `<article><span class="eyebrow">${d.theme.toUpperCase()} / ${CHIP_LIBRARY[d.chip].rarity.toUpperCase()}</span><h3>${d.name}</h3><p>${d.subtitle}</p><div class="dungeon-objectives">${dungeonGoals(this.state,d).map(g=>`<span class="${g.done?"done":""}">${g.done?"✓":"○"} ${g.label}</span>`).join("")}</div><button class="button ghost" data-dungeon-route="${d.id}" ${this.dungeon || d.theme !== this.state.world ? "disabled" : ""}>Volg route naar ingang</button></article>`).join("")}</div>${button("journal-transcript", "Lees recente gesprekken terug", "ghost")}`);
+    this.bind("journal-transcript", () => this.dialogueLog());
+    document.querySelectorAll("[data-dungeon-route]").forEach(b => b.onclick = () => {
+      const d=DUNGEONS[b.dataset.dungeonRoute], entry=WORLDS[d.theme].objects.find(o => o.dungeon===d.id);
+      this.close();this.engine.currentScene.player.go({x:entry.x,y:entry.y});
+    });
     document.querySelectorAll("[data-track-quest]").forEach(
       (b) =>
         (b.onclick = () => {
@@ -683,6 +784,17 @@ export class ProjectX {
     if (!this.state.tool) {
       this.ship();
       return;
+    }
+    if(obj.type === "dungeon") {this.dungeonDoor(obj.dungeon);return;}
+    if(obj.type === "beacon") {
+      this.state.flags[`beacon_${obj.id}`]=true;this.save();success();
+      this.toast("Reisbaken ontdekt. Gebruik L om tussen ontdekte bakens te reizen.");this.localMap();return;
+    }
+    if(obj.type === "exit") {this.exitDungeon();return;}
+    if(obj.type === "relic") {this.claimRelic(obj);return;}
+    if(obj.type === "supply") {
+      this.state.collected.push(obj.id);this.state.hp=Math.min(100,this.state.hp+40);this.save();
+      success();this.toast("Noodvoorraad gebruikt: +40 HP. Deze voorraad blijft leeg.");return;
     }
     if (obj.type === "practice") {
       this.practice();
@@ -781,6 +893,7 @@ export class ProjectX {
       return;
     }
     if (obj.type === "boss") {
+      if(!requirementsMet(this.state,obj)) {this.toast("De bosskern is verzegeld. Versla de wachters en herschrijf beide zegels.");return;}
       const f = this.state.flags;
       if (obj.id === "neon-boss" && !f.neonRelay) {
         this.toast("K-9 is afgeschermd. Hack eerst het energierelais.");
@@ -798,6 +911,7 @@ export class ProjectX {
     if (obj.type === "enemy" || obj.type === "boss") this.startBattle(obj);
   }
   npc(obj) {
+    if(obj.ambient) {this.toast(`${obj.name}: ${obj.line}`);return;}
     if (obj.line) {
       const choices = questsFor(this.state, obj.id),
         f = this.state.flags;
@@ -807,117 +921,47 @@ export class ProjectX {
         ) || choices.find((q) => !f["claimed_" + q.id]);
       const ready = q && questReady(this.state, q),
         active = q && f["accepted_" + q.id];
-      const lines = [obj.line];
-      if (q)
-        lines.push(
-          q.story,
-          ready
-            ? q.ending
-            : q.goals
-                .map((g) => (goalDone(this.state, g) ? "✓ " : "○ ") + g.label)
-                .join(" · "),
-        );
-      else if (choices.length)
-        lines.push(
-          "Wat je voor ons deed, is niet vergeten. Je kunt je reis voortzetten.",
-        );
-      if (this.state.flags.campaignDone)
-        lines.push(
-          "De kapitein is verdwenen. Nu begint het herstellen van onze wereld.",
-        );
-      this.dialogue(
-        obj.name,
-        lines,
-        q
-          ? ready
-            ? `Ontvang ${q.reward} Stars${q.chip ? " + Chip" : ""}`
-            : active
-              ? "Volg deze opdracht"
-              : "Neem de opdracht aan"
-          : "Tot ziens",
+      const id = obj.character || characterFor(obj.name, obj.portrait);
+      this.conversation(
+        npcFrames(obj, q, ready, this.state, id),
+        q ? ready ? `Ontvang ${q.reward} Stars${q.chip ? " + Chip" : ""}` : active ? "Volg deze opdracht" : "Neem de opdracht aan" : "Tot ziens",
         () => {
-          if (q) {
-            f["accepted_" + q.id] = true;
-            f.trackedQuest = q.id;
-            if (ready && !f["claimed_" + q.id]) {
+          if(q) {
+            f["accepted_" + q.id] = true; f.trackedQuest = q.id;
+            if(ready && !f["claimed_" + q.id]) {
               f["claimed_" + q.id] = true;
-              grant(this.state, { stars: q.reward, bolts: 3 });
-              const newChip = q.chip ? acquireChip(this.state, q.chip) : false;
+              grant(this.state, {stars:q.reward, bolts:3});
+              const newChip=q.chip ? acquireChip(this.state,q.chip) : false;
               record(this.state, `Sidequest voltooid: ${q.name}. ${q.ending}`);
-              this.toast(
-                `+${q.reward} Stars · +3 bouten${q.chip ? (newChip ? " · " + CHIP_LIBRARY[q.chip].name + " (I om te installeren)" : " · +30 Stars voor dubbele Chip") : ""}`,
-              );
+              this.toast(`+${q.reward} Stars · +3 bouten${q.chip ? newChip ? " · " + CHIP_LIBRARY[q.chip].name + " (I om te installeren)" : " · +30 Stars voor dubbele Chip" : ""}`);
+              success();
             } else record(this.state, `Sidequest: ${q.name}.`);
             this.save();
           }
           this.close();
         },
-        obj.portrait,
+        () => {
+          if(TRADERS[obj.id]) {
+            document.querySelector(".dialogue-actions").insertAdjacentHTML("beforeend", button("open-trader", "Bekijk de voorraad", "ghost"));
+            this.bind("open-trader", () => this.trader(obj.id));
+          }
+        },
       );
-      if (TRADERS[obj.id]) {
-        document
-          .querySelector(".dialogue-actions")
-          .insertAdjacentHTML(
-            "beforeend",
-            button("open-trader", "Bekijk de voorraad", "ghost"),
-          );
-        this.bind("open-trader", () => this.trader(obj.id));
-      }
       return;
     }
 
-    if (obj.id === "ilo")
-      this.dialogue(
-        "Ilo",
-        [
-          "Een transportmanifest? Natuurlijk heb ik dat gezien. Maar K-9 bewaakt de haven.",
-          "Help mij eerst: hack het energierelais in het noordoosten. Dan valt zijn schild uit en kunnen we zien waar de gevangenen heen gingen.",
-        ],
-        this.state.flags.neonTalk ? "Bekijk de handel" : "Ik help je",
-        () => {
-          if (!this.state.flags.neonTalk) {
-            this.state.flags.neonTalk = true;
-            record(this.state, "Ilo vraagt hulp bij het energierelais.");
-            this.save();
-            this.close();
-          } else this.shop();
-        },
-        1,
-      );
-    if (obj.id === "ren")
-      this.dialogue(
-        "Meester Ren",
-        [
-          "Het anker houdt onze eilanden in evenwicht. Vane gebruikt diezelfde kracht om ons vast te zetten.",
-          "Herstel het systeem als je kunt. Een overwinning die ons thuis vernietigt, is geen bevrijding.",
-        ],
-        "Ik onderzoek het anker",
-        () => {
-          this.state.flags.kageTalk = true;
-          record(
-            this.state,
-            "Ren vraagt om het zwaartekrachtanker te herstellen.",
-          );
-          this.save();
-          this.close();
-        },
-        2,
-      );
-    if (obj.id === "kaito")
-      this.dialogue(
-        "Kaito",
-        [
-          "Elke dag dat Vane hier blijft, verliezen we mensen. Overbelast het anker. Schakel hun hele netwerk uit.",
-          "Ren beschermt het verleden. Ik wil dat we morgen nog leven. Maar ja… de zweefrotsen kunnen vallen.",
-        ],
-        "Ik zal mijn keuze maken",
-        () => {
-          record(this.state, "Kaito stelt voor het anker te overbelasten.");
-          this.save();
-          this.close();
-        },
-        4,
-      );
+    if (MAIN_CONVERSATIONS[obj.id]) {
+      const finish = () => {
+        if(obj.id === "ilo") {
+          if(this.state.flags.neonTalk) {this.shop();return;}
+          this.state.flags.neonTalk=true; record(this.state,"Ilo vraagt hulp bij het energierelais.");
+        } else if(obj.id === "ren") {
+          this.state.flags.kageTalk=true; record(this.state,"Ren vraagt om het zwaartekrachtanker te herstellen.");
+        } else record(this.state,"Kaito stelt voor het anker te overbelasten.");
+        this.save();this.close();
+      };
+      this.conversation(MAIN_CONVERSATIONS[obj.id], obj.id === "ilo" ? this.state.flags.neonTalk ? "Bekijk de handel" : "Ik help je" : obj.id === "ren" ? "Ik onderzoek het anker" : "Ik zal mijn keuze maken", finish);
+    }
   }
   terminal(obj) {
     const key = {
@@ -1023,6 +1067,13 @@ export class ProjectX {
     );
   }
   startBattle(obj) {
+    if (!requirementsMet(this.state, obj)) {this.toast("De bosskern blijft verzegeld.");return;}
+    if(this.state.defeated.includes(obj.id))return;
+    if(obj.phase && !this.state.flags["seen_intro_" + obj.id]) {
+      this.conversation(extraBossIntro(obj, this.state.world), "Open de hackarena", () => {
+        this.state.flags["seen_intro_" + obj.id] = true; this.save(); this.startBattle(obj);
+      });return;
+    }
     const intro = BOSS_INTROS[obj.id],
       flag = "seen_intro_" + obj.id;
     if (intro && !this.state.flags[flag]) {
@@ -1055,7 +1106,7 @@ export class ProjectX {
   battleMarkup(inner, allowTargets = true) {
     const b = this.battle,
       w = WORLDS[this.state.world];
-    return `<div class="battle-top"><span class="eyebrow">ENCOUNTER / CHAPTER ${w.chapter}</span><span class="battle-round">LINK ${String(b.turn).padStart(2, "0")}</span></div>${b.members.length > 1 ? `<div class="gang-roster" aria-label="Kies een vijandelijk doel">${b.members.map((m, i) => `<button data-enemy-target="${i}" class="gang-member ${b.active === i ? "selected" : ""} ${m.hp <= 0 ? "defeated" : ""}" aria-pressed="${b.active === i}" ${!allowTargets || m.hp <= 0 ? "disabled" : ""}><span>${m.role}</span><strong>${m.name}</strong><small>${m.hp <= 0 ? "UITGESCHAKELD" : m.hp + " / " + m.maxHp + " HP"}</small><i style="--remaining:${(m.hp / m.maxHp) * 100}%"></i></button>`).join("")}</div>` : ""}<div class="battle-grid"><aside class="opponent">${b.id === "citadel-boss" ? portrait(3, "boss-portrait") : mech(w.id)}<span class="eyebrow">${b.type === "boss" ? "BOSS SIGNAL" : "VIJANDELIJK SIGNAAL"}</span><h2>${b.name}</h2><div class="enemy-meter"><i style="width:${(b.currentHp / b.maxHp) * 100}%"></i></div><div class="enemy-stats"><span>${Math.max(0, b.currentHp)} / ${b.maxHp} HP</span><span>${w.name}</span></div><div class="battle-self">${portrait(0)}<span>JOUW SIGNAAL<b>${this.state.hp} / 100</b></span></div><p class="small-note">Elke geslaagde hack doet ${damageFor(this.state)} damage. Een mislukte link geeft de vijand een tegenaanval.${b.members.length > 1 ? ` ${aliveMembers(b).length} signalen actief; iedere extra vijand versterkt een tegenaanval met 2.` : ""}</p></aside><section class="battle-task">${inner}</section></div>`;
+    return `<div class="battle-top"><span class="eyebrow">${this.dungeon ? this.activeWorld().name.toUpperCase() : "ENCOUNTER"} / CHAPTER ${w.chapter}</span><span class="battle-round">LINK ${String(b.turn).padStart(2, "0")}</span></div>${b.members.length > 1 ? `<div class="gang-roster" aria-label="Kies een vijandelijk doel">${b.members.map((m, i) => `<button data-enemy-target="${i}" class="gang-member ${b.active === i ? "selected" : ""} ${m.hp <= 0 ? "defeated" : ""}" aria-pressed="${b.active === i}" ${!allowTargets || m.hp <= 0 ? "disabled" : ""}><span>${m.role}</span><strong>${m.name}</strong><small>${m.hp <= 0 ? "UITGESCHAKELD" : m.hp + " / " + m.maxHp + " HP"}</small><i style="--remaining:${(m.hp / m.maxHp) * 100}%"></i></button>`).join("")}</div>` : ""}<div class="battle-grid"><aside class="opponent">${enemyMarkup(enemyForm({ ...b, form: b.members[b.active].form || b.form }, w.id), b.phaseActive)}<span class="eyebrow">${b.type === "boss" ? "BOSSKERN" : "VIJANDELIJK SIGNAAL"}</span><h2>${b.name}</h2><div class="enemy-meter"><i style="width:${(b.currentHp / b.maxHp) * 100}%"></i></div><div class="enemy-stats"><span>${Math.max(0, b.currentHp)} / ${b.maxHp} HP</span><span>${w.name}</span></div>${b.phase ? `<div class="boss-phase ${b.phaseActive ? "active" : ""}">${b.phaseActive ? "FASE II · " + b.phase : "FASE I · tweede fase bij 50% HP"}<small>${b.phaseActive ? b.phaseRule === "regen" ? "Mislukte hacks herstellen 10 boss-HP." : b.phaseRule === "armour" ? "Sterrenstaal absorbeert 3 hackschade." : "Tegenaanvallen doen 4 extra schade." : "Het patroon kan veranderen."}</small></div>` : ""}<div class="battle-self">${portrait(0)}<span>JOUW SIGNAAL<b>${this.state.hp} / 100</b></span></div><p class="small-note">Elke geslaagde hack doet ${damageFor(this.state)} schade. Een mislukte link geeft de vijand een tegenaanval.${b.members.length > 1 ? ` ${aliveMembers(b).length} signalen actief; iedere extra vijand versterkt een tegenaanval met 2.` : ""}</p></aside><section class="battle-task">${inner}</section></div><div class="battle-caption" role="status">ARI · Omni-Link actief. Kies een doel en maak verbinding.</div>`;
   }
   battleReady(
     message = "De Omni-Tool zoekt een ingang in het vijandelijke systeem.",
@@ -1101,15 +1152,16 @@ export class ProjectX {
       (ok) => {
         this.hackCleanup = null;
         const result = resolveBattleHack(b, this.state, ok);
+        showBattleEffect(result, b, this.state.world);
         const message = ok
           ? `Hack geslaagd. ${result.damage} damage op ${result.name}.${result.defeated ? " Signaal uitgeschakeld." : ""}`
           : `Link verbroken. ${result.name} countert: −${result.damage} vitaal signaal.${result.support ? " De groep versterkt de tegenaanval." : ""}`;
         this.save();
-        setTimeout(() => {
+        this.resultTimer = setTimeout(() => {
           if (battleWon(b)) this.battleWin();
           else if (this.state.hp <= 0) this.battleLost();
-          else this.battleReady(message);
-        }, 450);
+          else this.battleReady(message + (result.phaseChanged ? " Tweede fase: " + b.phase + "." : ""));
+        }, reducedEffects() ? 150 : 850);
       },
     );
   }
@@ -1123,8 +1175,8 @@ export class ProjectX {
       this.state.hp = 100;
       this.save();
       this.battle = null;
-      this.engine.currentScene.player.pos.x = WORLDS[this.state.world].spawn[0];
-      this.engine.currentScene.player.pos.y = WORLDS[this.state.world].spawn[1];
+      this.engine.currentScene.player.pos.x = this.activeWorld().spawn[0];
+      this.engine.currentScene.player.pos.y = this.activeWorld().spawn[1];
       this.engine.currentScene.player.path = [];
       this.engine.currentScene.player.destination = null;
       this.ship();
@@ -1139,6 +1191,7 @@ export class ProjectX {
     this.state.defeated.push(b.id);
     const boss = b.type === "boss";
     const rewards = battleRewards(b, this.state);
+    const dropped = b.dropChip ? acquireChip(this.state, b.dropChip) : false;
     grant(this.state, rewards);
     const salvageCount = boss || b.members.length > 1 ? 2 : 1;
     const salvage = salvageDrop(
@@ -1162,9 +1215,9 @@ export class ProjectX {
       record(this.state, "De piratenkapitein verslagen. Je ouders zijn vrij.");
     }
     this.save();
-    success();
+    if(dropped)lootSound(CHIP_LIBRARY[b.dropChip].rarity);else success();
     this.modal(
-      `<div class="victory"><div class="victory-mark">${icon("check")}</div><span class="eyebrow">VIJANDELIJK SIGNAAL / OFFLINE</span><h1>${boss ? "Systeem overwonnen." : "Link voltooid."}</h1><p>${b.id === "neon-boss" ? "Het transportmanifest bevat coördinaten voor KAGE." : b.id === "kage-boss" ? "Vane’s navigatiekern onthult de Citadel." : b.id === "citadel-boss" ? "Het Mech-Tech Armour valt uiteen. De deur naar je ouders gaat open." : b.members.length > 1 ? `${b.encounterName} is volledig verslagen. Je ontvangt de buit van de groep.` : "De drone is uitgeschakeld. Je ontvangt de achtergebleven hardware."}</p><div class="loot-summary"><span>${icon("star")} +${rewards.stars} STARS</span><span>${icon("bolt")} +${rewards.bolts} BOUTEN</span>${boss ? "<span>SOFTWARE GEÜPDATET</span>" : ""}<span>${salvageCount} × ${salvage}</span></div>${button("win-continue", b.id === "citadel-boss" ? "Vind je ouders" : "Ga verder " + icon("arrow"))}</div>`,
+      `<div class="victory"><div class="victory-mark">${icon("check")}</div><span class="eyebrow">VIJANDELIJK SIGNAAL / OFFLINE</span><h1>${boss ? "Systeem overwonnen." : "Link voltooid."}</h1><p>${b.id === "neon-boss" ? "Het transportmanifest bevat coördinaten voor KAGE." : b.id === "kage-boss" ? "Vane’s navigatiekern onthult de Citadel." : b.id === "citadel-boss" ? "Het Mech-Tech Armour valt uiteen. De deur naar je ouders gaat open." : b.members.length > 1 ? `${b.encounterName} is volledig verslagen. Je ontvangt de buit van de groep.` : "De drone is uitgeschakeld. Je ontvangt de achtergebleven hardware."}</p><div class="loot-summary"><span>${icon("star")} +${rewards.stars} STARS</span><span>${icon("bolt")} +${rewards.bolts} BOUTEN</span>${boss ? "<span>SOFTWARE GEÜPDATET</span>" : ""}<span>${salvageCount} × ${salvage}</span>${b.dropChip ? `<span style="color:${CHIP_LIBRARY[b.dropChip].color}">${CHIP_LIBRARY[b.dropChip].rarity.toUpperCase()} · ${CHIP_LIBRARY[b.dropChip].name}${dropped ? "" : " · +30 Stars"}</span>` : ""}</div>${button("win-continue", b.id === "citadel-boss" ? "Vind je ouders" : "Ga verder " + icon("arrow"))}</div>`,
       "victory",
     );
     this.bind("win-continue", () =>
@@ -1240,10 +1293,29 @@ export class ProjectX {
   }
   help() {
     this.modal(
-      `${this.header("BEDIENING", "Maak je eerste Omni-Link.")}<div class="help-grid"><div><kbd>WASD / PIJLEN</kbd><p>Bewegen. Je kunt ook op de grond klikken.</p><kbd>E / KLIK OP OBJECT</kbd><p>Interactie als je dichtbij bent.</p><kbd>SPATIE</kbd><p>Dash tijdens verkenning. Timingactie tijdens een reactiebalk.</p></div><div><kbd>M</kbd><p>Bestemmingen. Nieuwe chapters ontgrendelen via minibosses.</p><kbd>J</kbd><p>Missies en ontdekkingen.</p><kbd>L / I</kbd><p>Lokale kaart / Chips installeren en cargo bekijken.</p><kbd>ESC</kbd><p>Menu sluiten of de bediening openen.</p></div></div><p class="small-note">16 willekeurige hacks. Elke opdracht kan schade doen of een wereldobject openen. De presentatie volgt het thema van je planeet. Voortgang wordt lokaal in je browser bewaard.</p>`,
+      `${this.header("BEDIENING", "Maak je eerste Omni-Link.")}<div class="help-grid"><div><kbd>WASD / PIJLEN</kbd><p>Bewegen. Je kunt ook op de grond klikken.</p><kbd>E / KLIK OP OBJECT</kbd><p>Interactie als je dichtbij bent.</p><kbd>SPATIE</kbd><p>Dash tijdens verkenning. Timingactie tijdens een reactiebalk.</p></div><div><kbd>M</kbd><p>Bestemmingen. Nieuwe chapters ontgrendelen via minibosses.</p><kbd>J</kbd><p>Missies en ontdekkingen.</p><kbd>L / I</kbd><p>Lokale kaart / Chips installeren en cargo bekijken.</p><kbd>ESC</kbd><p>Menu sluiten of de bediening openen.</p></div></div><p class="small-note">${MINIGAMES.length} willekeurige hacks. Elke opdracht kan schade doen of een wereldobject openen. De presentatie volgt het thema van je planeet. Voortgang wordt lokaal in je browser bewaard.</p>`,
       "help",
     );
+    document.querySelector(".panel").insertAdjacentHTML("beforeend", button("help-settings", "Geluid, ondertitels & effecten", "ghost"));
+    this.bind("help-settings", () => this.settings());
     this.closeButton();
+  }
+  settings(back = () => this.close()) {
+    const p=audioSettings();
+    this.modal(`${this.header("INSTELLINGEN / PRESENTATIE", "Jouw tempo, jouw signaal.")}<div class="settings-grid"><label>Muziekvolume <input id="music-volume" type="range" min="0" max="1" step="0.05" value="${p.music}"/></label><label>Effectvolume <input id="effects-volume" type="range" min="0" max="1" step="0.05" value="${p.effects}"/></label><label>Ondertitelsnelheid<select id="subtitle-speed"><option value="normal">Rustig</option><option value="fast">Snel</option><option value="instant">Direct volledig zichtbaar</option></select></label><label class="check-option"><input id="audio-enabled" type="checkbox" ${p.enabled?"checked":""}/> Geluid aan</label><label class="check-option"><input id="large-subtitles" type="checkbox" ${p.largeText?"checked":""}/> Grotere ondertitels</label><label class="check-option"><input id="reduced-effects" type="checkbox" ${p.reducedEffects?"checked":""}/> Rustige effecten en minder beweging</label></div><p class="settings-caption">Klik een ondertitel om hem direct te tonen. SPATIE/ENTER toont eerst de volledige tekst en gaat daarna verder. Gesprekken kun je teruglezen in het logboek. Muziek start na je eerste toets of klik en pauzeert als dit tabblad op de achtergrond staat.</p>`, "settings", true);
+    document.querySelector("#subtitle-speed").value=p.subtitles;
+    for(const [id,key,kind] of [["music-volume","music","number"],["effects-volume","effects","number"],["subtitle-speed","subtitles","value"],["audio-enabled","enabled","bool"],["large-subtitles","largeText","bool"],["reduced-effects","reducedEffects","bool"]]) {
+      document.getElementById(id).oninput=e=>{updateAudioSettings({[key]:kind==="number"?Number(e.target.value):kind==="bool"?e.target.checked:e.target.value});this.soundOn=audioSettings().enabled;unlockAudio();};
+    }
+    this.closeButton(back);
+  }
+  soundStatus() { return audioStatus(); }
+  jumpBeacon(id) {
+    if(this.dungeon || !this.state.flags[`beacon_${id}`])return;
+    const o=WORLDS[this.state.world].objects.find(o=>o.id===id && o.type==="beacon");
+    if(!o)return;
+    const p=this.engine.currentScene.player;p.pos.x=o.x;p.pos.y=o.y;p.path=[];p.destination=null;
+    click();this.close();this.toast("Reisnetwerk: " + o.name);
   }
 }
 
@@ -1258,6 +1330,7 @@ for (const [id, action] of [
   ["mission-journal", "journal"],
   ["nav-ship", "ship"],
   ["help-button", "help"],
+  ["nav-settings", "settings"],
 ])
   project.bind(id, () => {
     if (!project.paused) project[action]();
@@ -1290,6 +1363,8 @@ window.addEventListener("keydown", (e) => {
         "ship",
         "equipment",
         "trader",
+        "settings",
+        "dungeon-door",
       ].includes(project.modalType) &&
       project.state.tool
     )
@@ -1300,6 +1375,7 @@ window.addEventListener("keydown", (e) => {
   if (e.code === "KeyL") project.localMap();
   if (e.code === "KeyM") project.destinations();
   if (e.code === "KeyJ") project.journal();
+  if (e.code === "KeyP") project.settings();
   if (e.code === "Escape") project.help();
 });
 try {

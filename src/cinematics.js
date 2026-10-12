@@ -1,7 +1,7 @@
 import { mangaPortrait } from "./characters.js";
 import { worldMapURL } from "./world-renderer.js";
 import { PIRATE_FACTION } from "./story.js";
-import { tone } from "./audio.js";
+import { audioSettings, speech, encounterSound, reducedEffects } from "./audio.js";
 
 const escape = (value) =>
   String(value).replace(
@@ -28,6 +28,7 @@ export function cinematicMarkup(frame, world, options = {}) {
       <div class="cinema-shade"></div><div class="cinema-screentone"></div>
       <span class="cinema-chapter">${escape(frame.title || world.subtitle)}</span>
       <div class="cinema-actor">${mangaPortrait(frame.portrait)}</div>
+      ${frame.listener ? `<div class="cinema-listener">${mangaPortrait(frame.listener)}</div>` : ""}
       ${frame.portrait === "captain" ? `<div class="cinema-faction"><img src="${base}art/pirate-sigil.svg" alt="Insigne van ${PIRATE_FACTION}"/><span>${PIRATE_FACTION}</span></div>` : ""}
     </div><div class="cinema-caption"><span class="cinema-speaker">${escape(frame.speaker)}</span>
       <button class="cinema-subtitle" id="cinema-subtitle" aria-label="Toon de volledige ondertitel"><span id="subtitle-text"></span></button>
@@ -39,9 +40,10 @@ export function mountSubtitle(frame) {
   const root = document.querySelector(".cinema-stage"),
     text = document.querySelector("#subtitle-text");
   if (!root || !text) return () => {};
-  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const reduced = reducedEffects();
+  const prefs = audioSettings();
   const letters = Array.from(frame.text);
-  let count = reduced ? letters.length : 0,
+  let count = reduced || prefs.subtitles === "instant" ? letters.length : 0,
     step = 0;
   const reveal = () => {
     count = letters.length;
@@ -54,11 +56,13 @@ export function mountSubtitle(frame) {
     if (count < letters.length) {
       count = Math.min(letters.length, count + 2);
       text.textContent = letters.slice(0, count).join("");
-      const speech = /[\p{L}\p{N}]/u.test(letters[count - 1] || "");
-      root.classList.toggle("speaking", !reduced && speech && step % 4 !== 0);
+      const isSpeech = /[\p{L}\p{N}]/u.test(letters[count - 1] || "");
+      root.classList.toggle("speaking", !reduced && isSpeech && step % 4 !== 0);
+      if (isSpeech && step % 5 === 0) speak();
     } else root.classList.remove("speaking");
     root.classList.toggle("blinking", !reduced && step % 113 >= 109);
-  }, 40);
+  }, prefs.subtitles === "fast" ? 20 : 40);
+  function speak() { speech(frame.portrait); }
   const subtitle = document.querySelector("#cinema-subtitle");
   subtitle.onclick = reveal;
   const keyboard = (e) => {
@@ -91,7 +95,7 @@ export function encounterMarkup(battle, world) {
 }
 export function mountEncounter(onComplete) {
   let finished = false;
-  const duration = matchMedia("(prefers-reduced-motion: reduce)").matches
+  const duration = reducedEffects()
     ? 120
     : 1000;
   const finish = () => {
@@ -113,7 +117,7 @@ export function mountEncounter(onComplete) {
   }
   window.addEventListener("keydown", keyboard);
   document.querySelector("#enter-arena").onclick = finish;
-  tone(130, 0.22, "triangle", 0.025);
+  encounterSound();
   return () => {
     finished = true;
     cleanup();

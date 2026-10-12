@@ -1,5 +1,6 @@
 export const icon = (name) => {
   const paths = {
+    settings: '<path d="m9 3-1 3-3 1-1 4 2 2-1 3 3 2 3-1 3 1 3-2-1-3 2-2-1-4-3-1-1-3z"/><circle cx="12" cy="11" r="3"/>',
     orbit:
       '<circle cx="12" cy="12" r="3"/><ellipse cx="12" cy="12" rx="10" ry="5" transform="rotate(-32 12 12)"/>',
     journal: '<path d="M5 3h14v18H5zM8 7h8M8 11h8M8 15h5"/>',

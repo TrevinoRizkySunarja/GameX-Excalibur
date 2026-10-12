@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 import { WORLDS, MINIGAMES } from "../src/data.js";
 import { walkable, routeTo, SIDE_QUESTS } from "../src/levels.js";
 import { HACKS, CHESS_PUZZLES, isQueenMate } from "../src/hack-catalog.js";
-test("all sixteen random hacks have instructions and a time budget", () => {
-  assert.equal(MINIGAMES.length, 16);
+test("all twenty random hacks have instructions and a time budget", () => {
+  assert.equal(MINIGAMES.length, 20);
   assert.deepEqual(new Set(MINIGAMES), new Set(Object.keys(HACKS)));
   for (const v of Object.values(HACKS)) assert.ok(v[3] >= 20);
 });

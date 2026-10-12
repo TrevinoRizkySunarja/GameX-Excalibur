@@ -615,7 +615,9 @@ export function walkable(world, x, y, radius = 0) {
     ),
   );
 }
-// Small deterministic navigation grid. Click-to-move follows streets around buildings.
+const navigationCache = new WeakMap();
+// Cache the immutable walk grid: long journeys do not recheck every street at
+// every BFS node, and wandering residents reuse the same collision geometry.
 export function routeTo(world, from, to, cell = 24) {
   const cols = Math.ceil(world.width / cell),
     rows = Math.ceil(world.height / cell);
@@ -624,8 +626,18 @@ export function routeTo(world, from, to, cell = 24) {
     y: Math.floor(index / cols) * cell + cell / 2,
   });
   const index = (p) => Math.floor(p.y / cell) * cols + Math.floor(p.x / cell);
-  const valid = (i) =>
-    i >= 0 && i < cols * rows && walkable(world, point(i).x, point(i).y, 8);
+  let grids = navigationCache.get(world);
+  if (!grids) navigationCache.set(world, grids = new Map());
+  let grid = grids.get(cell);
+  if (!grid) {
+    grid = new Uint8Array(cols * rows);
+    for (let i = 0; i < grid.length; i++) {
+      const p = point(i);
+      grid[i] = walkable(world, p.x, p.y, 8) ? 1 : 0;
+    }
+    grids.set(cell, grid);
+  }
+  const valid = (i) => i >= 0 && i < grid.length && grid[i];
   const nearest = (p) => {
     let best = -1,
       dist = Infinity;

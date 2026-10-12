@@ -1,4 +1,8 @@
 export const HACKS = {
+  fingerprint: ["Afdruk reconstrueren", "Wissel de vijf stroken totdat de afdruk met het voorbeeld overeenkomt.", "RECONSTRUCTIE", 45],
+  decoder: ["Deur-decoder", "Maak twee binaire sleutels. De actieve bitwaarden moeten samen het doelgetal vormen.", "DECODER", 35],
+  fuses: ["Zekeringen plaatsen", "Bescherm ieder circuit met de kleinste zekering die de belasting aankan.", "HARDWARE", 40],
+  mirrors: ["Laserpad richten", "Draai de spiegels en leid de lichtstraal naar UIT.", "OPTIEK", 45],
   timing: [
     "Signaal vergrendelen",
     "Stop de indicator in het verlichte venster.",

@@ -1,3 +1,4 @@
+import { EXPANSION_CAST } from "./expansion.js";
 export const PIRATE_FACTION = "De Gebroken Zon";
 export const PROLOGUE = [
   {
@@ -44,6 +45,7 @@ export const PROLOGUE = [
   },
 ];
 export const CHARACTERS = {
+  ...EXPANSION_CAST,
   hero: {
     name: "Jij",
     hair: "#263142",

@@ -37,4 +37,8 @@ Barlow Condensed and DM Sans are self-hosted through the Fontsource npm packages
 
 ## Current illustrated maps and manga panels
 
-Current gameplay maps are drawn by `src/world-renderer.js` rather than loaded from the archived paintings. `src/entities.js` draws the smooth world actors. See [ART_DIRECTION.md](ART_DIRECTION.md) for all twelve manga panel paths, exact generation prompts, the original pirate emblem and the animated portrait layers.
+Current gameplay maps are drawn by `src/world-renderer.js` rather than loaded from the archived paintings. `src/entities.js` draws the smooth world actors. See [ART_DIRECTION.md](ART_DIRECTION.md) for the original twelve manga panel paths, exact generation prompts, the original pirate emblem and the animated portrait layers.
+
+## Quantum Districts assets
+
+Six more people have paired speaking portraits, six original cosmic/mechanical enemy illustrations are used in combat and the overworld, and four new background panels support dialogue. See [QUANTUM_ART.md](QUANTUM_ART.md) for all final workspace paths, exact prompts, format and atlas bounds. Planet themes, dungeon geometry and all procedural soundtrack/effects are original project code.

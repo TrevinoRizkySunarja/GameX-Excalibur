@@ -19,6 +19,7 @@ export const freshState = () => ({
   defeated: [],
   log: [],
   lastHack: null,
+  dialogueHistory: [],
 });
 export function readSave(storage = globalThis.localStorage) {
   try {
@@ -45,6 +46,9 @@ export function readSave(storage = globalThis.localStorage) {
         : "neon";
       state.log = Array.isArray(state.log)
         ? state.log.filter((x) => typeof x === "string").slice(0, 30)
+        : [];
+      state.dialogueHistory = Array.isArray(state.dialogueHistory)
+        ? state.dialogueHistory.filter(x => x && typeof x.speaker === "string" && typeof x.text === "string").slice(-60).map(x => ({ speaker: x.speaker.slice(0, 80), text: x.text.slice(0, 1400) }))
         : [];
       return normalizeEquipment(state);
     }

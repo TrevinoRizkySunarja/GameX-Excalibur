@@ -51,6 +51,7 @@ export function createBattle(obj, state) {
         ? 40
         : 0),
     damage: m.damage,
+    form: m.form || obj.form,
   }));
   const b = {
     ...obj,
@@ -59,6 +60,7 @@ export function createBattle(obj, state) {
     active: 0,
     turn: 1,
     attempts: 0,
+    phaseActive: false,
   };
   selectTarget(b, 0);
   return b;
@@ -79,11 +81,14 @@ export function resolveBattleHack(b, state, ok) {
   const m = b.members[b.active];
   let result;
   if (ok) {
-    const damage = damageFor(state);
+    const damage = Math.max(1, damageFor(state) - (b.phaseActive && b.phaseRule === "armour" ? 3 : 0));
     m.hp = Math.max(0, m.hp - damage);
     state.hp = Math.min(100, state.hp + chipStats(state).heal);
     state.hacks++;
     result = { ok, damage, name: m.name, defeated: m.hp === 0 };
+    if (b.phase && !b.phaseActive && m.hp > 0 && m.hp <= m.maxHp / 2) {
+      b.phaseActive = true; result.phaseChanged = true;
+    }
     b.currentHp = m.hp;
     if (m.hp === 0 && !battleWon(b))
       selectTarget(
@@ -92,7 +97,11 @@ export function resolveBattleHack(b, state, ok) {
       );
   } else {
     const support = Math.max(0, aliveMembers(b).length - 1) * 2;
-    const damage = Math.max(1, m.damage + support - chipStats(state).shield);
+    const phaseDamage = b.phaseActive && !["regen", "armour"].includes(b.phaseRule) ? 4 : 0;
+    const damage = Math.max(1, m.damage + support + phaseDamage - chipStats(state).shield);
+    if (b.phaseActive && b.phaseRule === "regen") {
+      m.hp = Math.min(m.maxHp, m.hp + 10); b.currentHp = m.hp;
+    }
     state.hp = Math.max(0, state.hp - damage);
     result = { ok, damage, support, name: m.name };
   }

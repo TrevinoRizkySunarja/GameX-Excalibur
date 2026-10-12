@@ -18,6 +18,7 @@ import {
   trackedTarget,
 } from "../src/contracts.js";
 import { WORLDS } from "../src/data.js";
+import { DUNGEONS } from "../src/expansion.js";
 test("special chips require ownership, use two slots, alter stats and survive reload", () => {
   const s = freshState();
   assert.equal(toggleChip(s, "paradox"), false);
@@ -55,9 +56,9 @@ test("duplicate quest chips compensate and cargo sells exactly once", () => {
   assert.equal(sellSalvage(s), 0);
   assert.equal(s.stars, 58);
 });
-test("thirteen contracts point to reachable objects and completed chains unlock", () => {
-  assert.equal(Object.keys(QUESTS).length, 13);
-  const objects = Object.values(WORLDS).flatMap((w) => w.objects),
+test("twenty-five contracts point to reachable objects and completed chains unlock", () => {
+  assert.equal(Object.keys(QUESTS).length, 25);
+  const objects = [...Object.values(WORLDS), ...Object.values(DUNGEONS)].flatMap((w) => w.objects),
     s = freshState();
   for (const q of Object.values(QUESTS)) {
     assert.ok(objects.find((o) => o.id === q.giver));
