@@ -460,7 +460,7 @@ function nearRoad(world, x, y, r = 22) {
 function clearTerrain(world, x, y, radius = 25) {
   return (
     !nearRoad(world, x, y, radius) &&
-    !authoredBuildings[world.id].some(
+    !([...(authoredBuildings[world.theme || world.id] || []), ...(world.expansionBuildings || [])]).some(
       ([bx, by, w, h]) =>
         x > bx - radius &&
         x < bx + w + radius &&
@@ -470,10 +470,10 @@ function clearTerrain(world, x, y, radius = 25) {
   );
 }
 function terrainDetails(c, world) {
-  const kage = world.id === "kage";
-  for (let i = 0; i < 170; i++) {
-    const x = 22 + ((i * 0.61803398875) % 1) * 1490,
-      y = 30 + ((i * 0.41421356237) % 1) * 955;
+  const kage = (world.theme || world.id) === "kage";
+  for (let i = 0; i < (world.width > 4000 ? 540 : 170); i++) {
+    const x = 22 + ((i * 0.61803398875) % 1) * (world.width / 2 - 46),
+      y = 30 + ((i * 0.41421356237) % 1) * (world.height / 2 - 69);
     if (!clearTerrain(world, x, y, 14)) continue;
     if (kage) {
       // Small grass clusters and worn stepping stones on coherent green ground.
@@ -560,19 +560,20 @@ function terrainDetails(c, world) {
     }
 }
 export function drawWorldMap(c, world) {
-  const p = palettes[world.id];
+  const id = world.theme || world.id;
+  const p = palettes[id], width = world.width / 2, height = world.height / 2;
+  if (world.dungeon) { drawDungeon(c, world, p); return; }
   c.save();
-  c.scale(2, 2);
   c.fillStyle = p.ground;
-  c.fillRect(0, 0, 1536, 1024);
+  c.fillRect(0, 0, width, height);
   // Quiet terrain with large coherent areas; no random speckled noise.
-  const sky = c.createLinearGradient(0, 0, 1536, 1024);
-  sky.addColorStop(0, world.id === "kage" ? "#63836d" : "#233d4a");
+  const sky = c.createLinearGradient(0, 0, width, height);
+  sky.addColorStop(0, id === "kage" ? "#63836d" : "#233d4a");
   sky.addColorStop(1, p.ground);
   c.fillStyle = sky;
-  c.fillRect(0, 0, 1536, 1024);
+  c.fillRect(0, 0, width, height);
   terrainDetails(c, world);
-  if (world.id === "neon") {
+  if (id === "neon") {
     rounded(c, 583, 572, 281, 460, 26, p.water, "#7da2ac");
     for (let y = 607; y < 1024; y += 21)
       line(
@@ -586,7 +587,7 @@ export function drawWorldMap(c, world) {
         1,
       );
     rounded(c, 612, 582, 208, 132, 14, "#213940", "#0c2330");
-  } else if (world.id === "kage") {
+  } else if (id === "kage") {
     for (const [x, y, w, h] of [
       [352, 715, 119, 144],
       [687, 805, 205, 124],
@@ -624,20 +625,20 @@ export function drawWorldMap(c, world) {
   c.fill(streets);
   c.save();
   c.clip(streets);
-  c.strokeStyle = world.id === "kage" ? "#7d95815e" : "#99b2b225";
+  c.strokeStyle = id === "kage" ? "#7d95815e" : "#99b2b225";
   c.lineWidth = 0.65;
-  const tile = world.id === "kage" ? 27 : 46;
-  for (let y = 0; y < 1024; y += tile) {
+  const tile = id === "kage" ? 27 : 46;
+  for (let y = 0; y < height; y += tile) {
     line(
       c,
       [
         [0, y],
-        [1536, y],
+        [width, y],
       ],
       c.strokeStyle,
       0.65,
     );
-    for (let x = ((Math.floor(y / tile) % 2) * tile) / 2; x < 1536; x += tile)
+    for (let x = ((Math.floor(y / tile) % 2) * tile) / 2; x < width; x += tile)
       line(
         c,
         [
@@ -648,7 +649,7 @@ export function drawWorldMap(c, world) {
         0.65,
       );
   }
-  if (world.id === "neon") {
+  if (id === "neon") {
     c.strokeStyle = "#f1d19a99";
     c.setLineDash([15, 21]);
     c.lineWidth = 2;
@@ -669,7 +670,7 @@ export function drawWorldMap(c, world) {
   for (const [i, rect] of world.walkAreas.entries()) {
     const [x, y, w, h] = rect.map((n) => n / 2);
     if (w < 100 || h < 55 || i % 3 !== 0) continue;
-    if (world.id === "kage") {
+    if (id === "kage") {
       for (let j = 0; j < 12; j++) {
         const xx = x + 14 + ((j * 13) % (w - 24)),
           yy = y + h - 10 - (j % 3) * 3;
@@ -690,7 +691,7 @@ export function drawWorldMap(c, world) {
         c.font = "bold 9px sans-serif";
         c.textAlign = "left";
         c.fillText(
-          world.id === "neon" ? "LOADING ZONE / KEEP CLEAR" : "SECURITY ACCESS",
+          id === "neon" ? "LOADING ZONE / KEEP CLEAR" : "SECURITY ACCESS",
           x + 20,
           y + h - 15,
         );
@@ -698,8 +699,8 @@ export function drawWorldMap(c, world) {
     }
   }
   c.restore();
-  authoredBuildings[world.id].forEach((b, i) =>
-    building(c, ...b, p, world.id, i),
+  [...authoredBuildings[id], ...(world.expansionBuildings || [])].forEach((b, i) =>
+    building(c, ...b, p, id, i),
   );
   // Landing zone and each district's landmark have authored, consistent motifs.
   for (let i = 0; i < world.districts.length; i++) {
@@ -716,7 +717,7 @@ export function drawWorldMap(c, world) {
       c.ellipse(x, y, i === 0 ? 47 : 34, i === 0 ? 31 : 25, 0, 0, Math.PI * 2);
       c.stroke();
     }
-    if (world.id === "kage" && i === 3) {
+    if (id === "kage" && i === 3) {
       // Torii frame beside the path, not across the walkable lane.
       for (const dx of [-58, 58])
         rounded(c, x + dx, y - 30, 8, 58, 2, "#b96964");
@@ -729,7 +730,7 @@ export function drawWorldMap(c, world) {
     if (Math.min(ww, hh) < 36) continue;
     const x = xx + 9,
       y = yy + 9;
-    if (world.id === "kage") {
+    if (id === "kage") {
       line(
         c,
         [
@@ -753,7 +754,7 @@ export function drawWorldMap(c, world) {
         24,
         7,
         2,
-        world.id === "kage" ? "#907a62" : "#254453",
+        id === "kage" ? "#907a62" : "#254453",
         "#91a2a1",
       );
       line(
@@ -768,14 +769,14 @@ export function drawWorldMap(c, world) {
     }
   }
   // Plant only off streets so scenery and the navigation agree.
-  for (let i = 0; i < 32; i++) {
-    const x = 45 + ((i * 137) % 1460),
-      y = 80 + ((i * 223) % 866);
-    if (clearTerrain(world, x, y, 35) && world.id !== "citadel")
-      tree(c, x, y, 18 + Math.abs(noise(x, y)) * 10, world.id === "kage");
+  for (let i = 0; i < (world.width > 4000 ? 140 : 32); i++) {
+    const x = 45 + ((i * 137) % (width - 76)),
+      y = 80 + ((i * 223) % (height - 160));
+    if (clearTerrain(world, x, y, 35) && id !== "citadel")
+      tree(c, x, y, 18 + Math.abs(noise(x, y)) * 10, id === "kage");
   }
   // Bridge railings are outside the traversable deck.
-  if (world.id === "neon")
+  if (id === "neon")
     for (const y of [779, 799])
       line(
         c,
@@ -786,13 +787,25 @@ export function drawWorldMap(c, world) {
         "#8eb2b1",
         3,
       );
+  for (const d of world.districts.filter(d => d.expanded)) {
+    const x = d.x / 2, y = d.y / 2;
+    rounded(c, x - 35, y - 66, 155, 25, 3, id === "kage" ? "#422d32" : "#192b45", p.trim);
+    c.font = "bold 11px sans-serif"; c.textAlign = "center"; c.fillStyle = p.trim;
+    c.fillText(d.name.toUpperCase(), x + 42, y - 49, 145);
+    line(c, [[x-25,y-40],[x-25,y-15]], "#51616a", 3);
+    line(c, [[x+107,y-40],[x+107,y-15]], "#51616a", 3);
+    if (id === "kage") tree(c, x + 130, y - 55, 24, true);
+    else {
+      for (let i=0;i<3;i++) rounded(c,x+130+i*17,y-50,12,30,2,[p.trim,"#a46cc0",p.light][i]);
+    }
+  }
   c.restore();
 }
 export function worldMapCanvas(world) {
   if (!cache.has(world.id)) {
     const canvas = document.createElement("canvas");
-    canvas.width = world.width;
-    canvas.height = world.height;
+    canvas.width = world.width / 2;
+    canvas.height = world.height / 2;
     drawWorldMap(canvas.getContext("2d"), world);
     cache.set(world.id, { canvas });
   }
@@ -802,4 +815,35 @@ export function worldMapURL(world) {
   worldMapCanvas(world);
   const item = cache.get(world.id);
   return (item.url ??= item.canvas.toDataURL("image/webp", 0.92));
+}
+
+function drawDungeon(c, world, p) {
+  const w=world.width/2, h=world.height/2, kage=world.theme==="kage";
+  c.save(); c.fillStyle=kage?"#192b2e":"#091321"; c.fillRect(0,0,w,h);
+  const glow=c.createRadialGradient(w*.78,h*.2,20,w*.7,h*.4,w*.65);
+  glow.addColorStop(0,kage?"#596859":"#254064"); glow.addColorStop(1,"#0a1624");
+  c.fillStyle=glow; c.fillRect(0,0,w,h);
+  for (const [i,r] of world.walkAreas.entries()) {
+    const [x,y,rw,rh]=r.map(n=>n/2);
+    rounded(c,x-12,y-12,rw+24,rh+24,8,kage?"#384f4b":"#20344b",p.trim);
+    rounded(c,x,y,rw,rh,3,kage?"#647264":"#354355");
+    c.save(); c.beginPath(); c.rect(x,y,rw,rh); c.clip();
+    for(let yy=y;yy<y+rh;yy+=24) for(let xx=x;xx<x+rw;xx+=40) {
+      c.strokeStyle=kage?"#83958366":"#738c9c44";c.lineWidth=.6;c.strokeRect(xx,yy,40,24);
+    } c.restore();
+    for (let xx=x+20;xx<x+rw;xx+=140) {
+      rounded(c,xx,y-37,18,24,3,kage?"#78665c":"#283447",p.trim);
+      ellipse(c,xx+9,y-28,3,4,p.light);
+    }
+  }
+  for (let i=0;i<16;i++) {
+    const x=35+(i*137)%1200,y=60+(i*211)%790;
+    if (nearRoad(world,x,y,35)) continue;
+    if(kage){tree(c,x,y,18,i%3===0);}
+    else {rounded(c,x,y,65,45,4,"#192b40","#3b5468");for(let z=0;z<3;z++)line(c,[[x+10,y+10+z*9],[x+55,y+10+z*9]],p.trim+"66");}
+  }
+  for(const d of world.districts){ c.fillStyle=p.trim;c.font="bold 13px sans-serif";c.textAlign="center";c.fillText(d.name.toUpperCase(),d.x/2,d.y/2-40); }
+  const boss=world.objects.find(o=>o.id===world.boss);c.strokeStyle=p.trim;c.lineWidth=2;
+  for(const r of [32,44]){c.beginPath();c.ellipse(boss.x/2,boss.y/2,r,r*.7,0,0,Math.PI*2);c.stroke();}
+  c.restore();
 }

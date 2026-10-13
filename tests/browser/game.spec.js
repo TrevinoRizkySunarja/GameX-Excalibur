@@ -18,6 +18,9 @@ async function open(page) {
   });
   await page.goto("/?debug=1");
   await expect(page.locator("#new-game")).toBeVisible();
+  // Let software WebGL finish its first texture upload before timed tasks.
+  const readyFrame=await page.evaluate(()=>window.__PROJECTX__.engine.stats.currFrame.id);
+  await expect.poll(()=>page.evaluate(()=>window.__PROJECTX__.engine.stats.currFrame.id),{timeout:60000}).toBeGreaterThan(readyFrame+2);
 }
 async function solve(page) {
   await expect(page.locator("#minigame")).toBeVisible();
@@ -44,7 +47,7 @@ async function solve(page) {
     for (let i = 1; i <= 5; i++)
       await page
         .getByRole("button", { name: `Puls ${i}`, exact: true })
-        .click();
+        .click({timeout:10000});
   } else if (await page.locator("[data-memory]").count()) {
     await expect(page.locator("#memory-phase")).toContainText("Herhaal", {
       timeout: 8000,
@@ -69,13 +72,17 @@ async function solve(page) {
   }
   await page.evaluate(() => (window.memorySequence = []));
 }
+async function finishDialogue(page) {
+  await expect(page.locator("#dialogue-next")).toBeVisible();
+  for(let i=0;i<12 && await page.locator("#dialogue-next").count();i++) await page.locator("#dialogue-next").click();
+}
 async function start(page) {
   await page.locator("#new-game").click();
   for (let i = 0; i < 6; i++) await page.locator("#story-next").click();
   await page.locator("#tool-tutorial").click();
   await solve(page);
-  await page.locator("#dialogue-next").click();
-  await page.locator("#dialogue-next").click();
+  await finishDialogue(page);
+  await finishDialogue(page);
   await expect(page.locator("#overlay")).toBeHidden();
 }
 async function interaction(page, id) {
@@ -101,7 +108,7 @@ async function interaction(page, id) {
       ),
     );
     if (await page.locator("#dialogue-next").count())
-      await page.locator("#dialogue-next").click();
+      await finishDialogue(page);
   }
 }
 async function boss(page, id) {
@@ -138,6 +145,7 @@ test("title loads actual Excalibur scene and has no browser runtime errors", asy
 test("each random minigame can succeed through its real UI", async ({
   page,
 }) => {
+  test.setTimeout(240000);
   await open(page);
   for (const type of [
     "nodes",
@@ -156,6 +164,10 @@ test("each random minigame can succeed through its real UI", async ({
     "clean",
     "balance",
     "locks",
+    "fingerprint",
+    "decoder",
+    "fuses",
+    "mirrors",
   ]) {
     await page.evaluate(async (type) => {
       const g = window.__PROJECTX__;
@@ -238,16 +250,16 @@ test("expanded districts have moving residents, solid shores, routes and one-tim
     )
     .toBeLessThan(45);
   await interaction(page, "neon-mira");
-  await page.locator("#dialogue-next").click();
+  await finishDialogue(page);
   await interaction(page, "neon-repair");
   await solve(page);
-  await page.locator("#dialogue-next").click();
+  await finishDialogue(page);
   await interaction(page, "neon-mira");
-  await expect(page.locator("#dialogue-next")).toContainText("45 Stars");
-  await page.locator("#dialogue-next").click();
+  await expect(page.locator("#subtitle-accessible")).toContainText("burgerscheepje");
+  await finishDialogue(page);
   const stars = await page.evaluate(() => window.__PROJECTX__.state.stars);
   await interaction(page, "neon-mira");
-  await page.locator("#dialogue-next").click();
+  await finishDialogue(page);
   expect(await page.evaluate(() => window.__PROJECTX__.state.stars)).toBe(
     stars,
   );
@@ -349,10 +361,10 @@ test("campaign: tutorial, chapter quests, choice, bosses, epilogue and postgame"
   await open(page);
   await start(page);
   await interaction(page, "ilo");
-  await page.locator("#dialogue-next").click();
+  await finishDialogue(page);
   await interaction(page, "neon-relay");
   await solve(page);
-  await page.locator("#dialogue-next").click();
+  await finishDialogue(page);
   await interaction(page, "neon-boss");
   await page.waitForTimeout(300);
   await page.screenshot({
@@ -372,23 +384,23 @@ test("campaign: tutorial, chapter quests, choice, bosses, epilogue and postgame"
     fullPage: true,
   });
   await page.locator('[data-destination="kage"]').click();
-  await page.locator("#dialogue-next").click();
+  await finishDialogue(page);
   await interaction(page, "ren");
-  await page.locator("#dialogue-next").click();
+  await finishDialogue(page);
   await interaction(page, "kage-anchor");
   await solve(page);
   await page.locator("#overload-anchor").click();
-  await page.locator("#dialogue-next").click();
+  await finishDialogue(page);
   await boss(page, "kage-boss");
   await page.keyboard.press("m");
   await page.locator('[data-destination="citadel"]').click();
-  await page.locator("#dialogue-next").click();
+  await finishDialogue(page);
   await interaction(page, "citadel-core");
   await solve(page);
-  await page.locator("#dialogue-next").click();
+  await finishDialogue(page);
   await boss(page, "citadel-boss");
   for (let i = 0; i < 3; i++) await page.locator("#ending-next").click();
-  await page.locator("#dialogue-next").click();
+  await finishDialogue(page);
   await expect(page.locator('[data-destination="neon"]')).toBeEnabled();
   expect(
     await page.evaluate(() => window.__PROJECTX__.state.flags.campaignDone),
@@ -403,9 +415,12 @@ test("failure deals damage, retreat preserves loot and a defeated encounter cann
 }) => {
   await open(page);
   await start(page);
-  await page.evaluate(() => {
+  await page.evaluate(async () => {
+    const {MINIGAMES}=await import("/src/data.js");
+    const choices=MINIGAMES.filter(type=>type!=="timing");
+    const roll=(choices.indexOf("logic")+.5)/choices.length;
     window.__PROJECTX__.state.lastHack = "timing";
-    Math.random = () => 0.23;
+    Math.random = () => roll;
   });
   await interaction(page, "neon-drone");
   await page.locator("#battle-hack").click();
@@ -510,10 +525,10 @@ test("shop upgrades, insufficient funds and the restore choice work", async ({
     g.destinations();
   });
   await page.locator('[data-destination="kage"]').click();
-  await page.locator("#dialogue-next").click();
+  await finishDialogue(page);
   await interaction(page, "kage-anchor");
   await page.locator("#restore-anchor").click();
-  await page.locator("#dialogue-next").click();
+  await finishDialogue(page);
   await interaction(page, "kage-boss");
   await expect(page.locator(".enemy-stats")).toContainText("125 / 125 HP");
   expect(
@@ -531,6 +546,9 @@ test("wandering trader sells chips and cargo, loadout persists and a story quest
     g.state.stars = 300;
     g.state.salvage.lens = 2;
     g.close();
+    // Residents deliberately stop within 98 world units of the player.
+    g.engine.currentScene.player.pos.x=1400;
+    g.engine.currentScene.player.pos.y=1000;
   });
   const initial = await page.evaluate(
     () =>
@@ -569,13 +587,13 @@ test("wandering trader sells chips and cargo, loadout persists and a story quest
   });
   await page.keyboard.press("Escape");
   await interaction(page, "neon-nori");
-  await page.locator("#dialogue-next").click();
+  await finishDialogue(page);
   await interaction(page, "neon-postbox");
   await solve(page);
-  await page.locator("#dialogue-next").click();
+  await finishDialogue(page);
   await interaction(page, "neon-nori");
-  await expect(page.locator(".panel")).toContainText("bleven hopen");
-  await page.locator("#dialogue-next").click();
+  await expect(page.locator("#subtitle-accessible")).toContainText("bleven hopen");
+  await finishDialogue(page);
   // Flow was already purchased, so the guaranteed quest Chip is compensated by 30 Stars.
   expect(await page.evaluate(() => window.__PROJECTX__.state.stars)).toBe(340);
   await page.reload();

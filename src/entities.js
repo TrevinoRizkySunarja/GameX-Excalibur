@@ -1,4 +1,5 @@
 import * as ex from "excalibur";
+import { drawEnemy, enemyForm } from "./enemies.js";
 
 const shape = (c, x, y, w, h, r, color, stroke = "#14232e") => {
   c.beginPath();
@@ -140,11 +141,11 @@ export function cleanEntityGraphic(
       if (entity.type === "enemy" || entity.type === "boss") {
         if (entity.members) {
           c.globalAlpha = 0.85;
-          drone(c, x - 29, y - 6, "#ec9f8e");
-          drone(c, x + 29, y - 8, "#dc7e8b");
+          drawEnemy(c, x - 29, y - 6, "sentinel", 52, "#ec9f8e");
+          drawEnemy(c, x + 29, y - 8, "wraith", 52, "#dc7e8b");
           c.globalAlpha = 1;
         }
-        drone(c, x, y + Math.sin(t * 3) * 2, "#ef938b", entity.type === "boss");
+        drawEnemy(c, x, y, enemyForm(entity, world.theme || world.id), entity.type === "boss" ? 94 : 69);
         if (entity.members) {
           c.fillStyle = "#efb185";
           c.font = "bold 10px sans-serif";
@@ -173,6 +174,25 @@ export function cleanEntityGraphic(
           shape(c, x + dx, y + 2, 7, 7, 2, "#efa974");
         }
         shape(c, x - 11, y - 4, 22, 5, 2, "#487684");
+      } else if (entity.type === "beacon") {
+        shape(c,x-9,y-35,18,36,3,"#426276",accent);
+        c.strokeStyle=accent;c.lineWidth=1.5;c.beginPath();c.ellipse(x,y-40,19,6,0,0,Math.PI*2);c.stroke();
+        c.fillStyle=accent;c.fillRect(x-3,y-33,6,21);
+      } else if (entity.type === "dungeon" || entity.type === "exit") {
+        shape(c, x - 24, y - 55, 48, 56, 4, "#302f47", accent);
+        shape(c, x - 14, y - 45, 28, 46, 1, "#111b2c");
+        c.strokeStyle = accent; c.lineWidth = 2;
+        c.beginPath(); c.ellipse(x, y - 26, 12, 19, 0, 0, Math.PI * 2); c.stroke();
+        if ((world.theme || world.id) === "kage") {
+          shape(c,x-33,y-56,66,6,2,"#974e54");shape(c,x-29,y-47,58,4,1,"#ddad7d");
+        }
+      } else if (entity.type === "relic") {
+        const color = entity.chip === "prismheart" || entity.chip === "eclipse" ? "#e0a6ff" : "#f1cb81";
+        c.fillStyle = color + "20";c.beginPath();c.arc(x,y-22,29,0,Math.PI*2);c.fill();
+        shape(c,x-20,y-40,40,36,4,"#39354f",color);shape(c,x-17,y-36,34,6,1,color);
+        for(let i=0;i<5;i++) {const a=t+i*1.26;c.fillStyle=color;c.fillRect(x+Math.cos(a)*27,y-25+Math.sin(a)*18,2,2);}
+      } else if (entity.type === "supply") {
+        shape(c,x-16,y-30,32,31,4,"#385e54","#8ed8b8");shape(c,x-3,y-25,6,20,1,"#b2e9d1");shape(c,x-10,y-18,20,6,1,"#b2e9d1");
       } else if (entity.type === "chest") {
         shape(c, x - 19, y - 29, 38, 30, 5, "#8a7e78");
         shape(c, x - 18, y - 27, 36, 10, 3, "#bcaa87");

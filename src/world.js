@@ -11,6 +11,7 @@ import {
 import { chipStats } from "./progression.js";
 import { trackedTarget } from "./contracts.js";
 import { walkable, routeTo } from "./levels.js";
+import { DUNGEONS, dungeonGoals } from "./expansion.js";
 
 export class Explorer extends ex.Actor {
   constructor(pos, controller, planet) {
@@ -190,20 +191,21 @@ export class PlanetScene extends ex.Scene {
   constructor(id, controller) {
     super();
     this.id = id;
-    this.planet = WORLDS[id];
+    this.planet = WORLDS[id] || DUNGEONS[id];
     this.controller = controller;
     this.worldActors = new Map();
     this.nearest = null;
   }
   onInitialize() {
-    const floor = new ex.Actor({
-      pos: ex.vec(0, 0),
-      anchor: ex.vec(0, 0),
-      z: -100,
-    });
-    floor.graphics.use(floorGraphic(this.planet));
-    floor.graphics.anchor = ex.vec(0, 0);
-    this.add(floor);
+    // Chunked floors avoid WebGL texture limits on larger worlds.
+    for (let y = 0; y < this.planet.height; y += 1024)
+      for (let x = 0; x < this.planet.width; x += 1024) {
+        const slice = { x, y, width: Math.min(1024, this.planet.width - x), height: Math.min(1024, this.planet.height - y) };
+        const floor = new ex.Actor({ pos: ex.vec(x, y), anchor: ex.vec(0, 0), z: -100 });
+        floor.graphics.use(floorGraphic(this.planet, slice));
+        floor.graphics.anchor = ex.vec(0, 0);
+        this.add(floor);
+      }
     this.player = new Explorer(this.planet.spawn, this.controller, this.planet);
     this.add(this.player);
     for (const obj of this.planet.objects) {
@@ -293,7 +295,9 @@ export class PlanetScene extends ex.Scene {
     this.controller.setPrompt(nearest);
     if (engine.input.keyboard.wasPressed(ex.Keys.E) && nearest)
       this.controller.interact(nearest);
-    const a =
+    const a = this.planet.dungeon
+      ? this.worldActors.get(dungeonGoals(this.controller.state, this.planet).find(g => !g.done)?.target || `${this.id}-exit`)
+      :
       this.worldActors.get(trackedTarget(this.controller.state)) ||
       this.worldActors.get(targetFor(this.controller.state, this.id));
     this.controller.updateRadar(
@@ -303,16 +307,16 @@ export class PlanetScene extends ex.Scene {
   }
   pointer(pos) {
     if (this.controller.paused) return;
-    const a = [...this.worldActors.values()].find(
-      (a) => a.graphics.visible && a.pos.distance(pos) < 45,
-    );
+    const a = [...this.worldActors.values()]
+      .filter(a => a.graphics.visible && a.pos.distance(pos) < 45)
+      .sort((a, b) => a.pos.distance(pos) - b.pos.distance(pos))[0];
     if (a && this.player.pos.distance(a.pos) < 115)
       this.controller.interact(a.data.obj);
     else this.player.go(pos);
   }
 }
 export async function createEngine(controller) {
-  await loadWorldArt(Object.values(WORLDS));
+  await loadWorldArt([...Object.values(WORLDS), ...Object.values(DUNGEONS)]);
   const game = new ex.Engine({
     canvasElementId: "world-canvas",
     width: 960,
@@ -326,7 +330,7 @@ export async function createEngine(controller) {
     maxFps: 60,
   });
   controller.engine = game;
-  for (const id of Object.keys(WORLDS))
+  for (const id of [...Object.keys(WORLDS), ...Object.keys(DUNGEONS)])
     game.add(id, new PlanetScene(id, controller));
   game.input.pointers.primary.on("down", (evt) =>
     game.currentScene.pointer?.(evt.worldPos),

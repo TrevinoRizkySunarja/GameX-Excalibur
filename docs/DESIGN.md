@@ -38,7 +38,7 @@ These concepts are placeholders for future world building, not extra playable le
 
 ## Hack tasks, results and themes
 
-- **Task:** one of sixteen minigames is randomly chosen. Immediate repeats are avoided when another task exists.
+- **Task:** one of twenty minigames is randomly chosen. Immediate repeats are avoided when another task exists.
 - **Result:** battle success deals upgrade-dependent damage; terminals advance missions; archive success opens secrets.
 - **Theme:** NEON uses data-network presentation, KAGE uses an anchor/samurai protocol, CITADEL uses imperial encryption. Rules remain consistent.
 
@@ -49,19 +49,19 @@ In the arena, a failed task or expired timer produces a counterattack. The playe
 - Ground pickups provide a small random number of Stars once.
 - Chests provide Stars and bolts once.
 - Normal encounters provide Stars and hardware once.
-- Bosses provide stronger rewards, a chip if an upgrade slot is available, and guaranteed coordinates or story progress.
-- The original base software upgrades increase hack damage from 25 to 40. Eight additional collectible Chips offer distinct passive effects; two can be equipped at once. Damage Chips stack with the base upgrades.
+- Chapter bosses provide stronger rewards, a chip if an upgrade slot is available, and coordinates or story progress. Optional world bosses drop unique software; dungeon bosses unlock their vaults.
+- The original base software upgrades increase hack damage from 25 to 40. Twenty-two collectible Chips offer distinct passive effects; two can be equipped at once. Damage Chips stack with the base upgrades.
 - Bolts fund two movement upgrades: +15 movement speed and a shorter dash cooldown per upgrade.
 - Stars buy Chips and recovery; bolts can also be recycled into Stars. Four types of salvage can be sold to traders. Shops show prices and reject duplicate purchases.
 - All three archives complete the optional large quest and give bonus Stars and a chip if there is room.
 
 ## Scope and next experiments
 
-The expanded build proves the loop with three 3072 × 2048 worlds and sixteen tasks. The other nine destinations remain concepts. It does not implement seamless space flight, multiplayer, large branching cutscenes or a live-service endgame.
+The expanded build proves the loop with 6144 × 4096 NEON/KAGE, a 3072 × 2048 CITADEL, four instanced dungeons and twenty tasks. The other nine destinations remain concepts. It does not implement seamless space flight, multiplayer, large branching cutscenes or a live-service endgame.
 
-Each world uses an authored Canvas illustration driven by the existing navigation rectangles. Foreground residents, ships, enemies and interactions remain live Excalibur actors. The maps do not yet provide destructible buildings, interiors or automatic foreground occlusion. Old generated paintings are retained only as reference.
+Each world uses an authored Canvas illustration driven by the existing navigation rectangles. Foreground residents, ships, enemies and interactions remain live Excalibur actors. The maps do not yet provide destructible buildings, seamless interiors or automatic foreground occlusion. Old generated paintings are retained only as reference.
 
-Eighteen residents follow short routes and stop while the player approaches. Quest givers remember acceptance, repairs and claimed rewards in the existing save. Completed main-story and loot IDs remain compatible with the earlier prototype.
+Forty residents follow short routes and stop while the player approaches. Quest givers remember acceptance, repairs and claimed rewards in the existing save. Completed main-story and loot IDs remain compatible with the earlier prototype.
 
 ### The first four sidequests
 
@@ -83,8 +83,9 @@ Each repair also gives 12 Stars once. Return to the NPC to claim the quest rewar
 | Logic          | Chess mate-in-one, cause-and-effect combinations, rotating pipes |
 | Short tasks    | Matching wires, ordered pulses, numbers 1–9, filter cleanup      |
 | Control        | Cursor maze, frequency sliders, energy balance, symbol locks     |
+| Hardware       | Fingerprint strips, binary decoder, safe fuses, laser mirrors    |
 
-All sixteen use the same random selection system in battles and exploration. They do not grant specific effects or belong exclusively to one world. The three planet themes change their presentation. The practice terminal also assigns a random task rather than letting the player choose one.
+All twenty use the same random selection system in battles and exploration. They do not grant specific effects or belong exclusively to one world. The three planet themes change their presentation. The practice terminal also assigns a random task rather than letting the player choose one.
 
 Useful next playtest questions:
 
@@ -110,7 +111,7 @@ The side stories follow the consequences of the campaign: NEON’s residents kee
 | Een robot kiest zelf         | ECHO     | Unlock two forbidden memory cores                    | Paradox Kernel   |
 | De rekening van het imperium | Dr. Vale | Open the medical door, then defeat two patrols       | Aegis-plaat      |
 
-Combined with the first four quests this gives thirteen sidequests, in addition to the main campaign and the three-archive post-campaign objective. Each contract awards its listed Stars, three bolts and any promised Chip. Duplicate Chip rewards become thirty Stars. Required objectives have fixed locations and are not gated by random loot.
+Combined with the first four quests this original set gives thirteen sidequests (the Quantum Districts extension adds twelve more), in addition to the main campaign and the three-archive post-campaign objective. Each contract awards its listed Stars, three bolts and any promised Chip. Duplicate Chip rewards become thirty Stars. Required objectives have fixed locations and are not gated by random loot.
 
 ### Shops and builds
 
@@ -123,3 +124,27 @@ The equipment screen (I) holds two special Chip slots. It displays the resulting
 The opening is a six-panel manga sequence: farewell, boarding, goodbye through the window, capture by De Gebroken Zon, escape, then the discovery of the Omni-Tool years later. Important NPC dialogues use illustrated or world-backed stages, original animated mouth/eye layers and Dutch subtitles. Advancement never chooses a KAGE outcome automatically. Opening replay is available on the ship.
 
 Each of NEON, KAGE and CITADEL has a three-member enemy gang. The player can switch targets between hacks. A failed hack takes the selected enemy’s damage plus two for each other living enemy, reduced by equipped protection. Killing a support unit reduces pressure; the encounter completes only after every member is gone. Victory grants the original enemy reward plus eight Stars and one bolt per additional member, and two salvage items. Retreated encounters reset enemy health; player damage remains saved. Existing enemy IDs still represent complete encounters, keeping sidequest and save compatibility.
+
+
+## Quantum Districts expansion
+
+NEON and KAGE retain their original landing zones and chapter progression. Each adds eight districts, two instanced dungeons, three illustrated quest protagonists, eight ambient residents and nine discoverable travel beacons. Their maps now measure 6144 × 4096 world units, four times the old area. Floors render in 1024-unit chunks so mobile WebGL never needs one giant world texture. CITADEL remains 3072 × 2048.
+
+Nyx rescues stolen voices and searches for her sister; Cass restores the clinic and rejects manufactured memories of his daughter; Flux rebuilds the Wayfarer's old drive and protects evacuation routes. Akari turns a weapon forge into a workshop for prostheses; Sumi keeps erased names alive; Kaede faces his responsibility for the occupation. Each character has a two-quest chain with real objectives, return dialogue and a software upgrade. Twenty-five sidequests are playable in total. Main conversations with Ilo, Ren and Kaito include the hero’s questions and personal reactions.
+
+Dungeon order: clear patrol → rewrite both seals → defeat boss → open vault. Doors enforce completion through saved IDs; the radar follows the first unfinished objective. Every dungeon has a one-use 40-HP cache. Escape through the entrance at any time. Retreat resets unfinished encounter HP while completed guards, keys, supplies and vaults persist. Reload safely resumes on the parent planet.
+
+| Dungeon / location | Boss | Phase II | Guaranteed software |
+| --- | --- | --- | --- |
+| Blackline Kathedraal / NEON | CHORUS-9 | Failed hacks take 4 extra counterdamage | Legendary Voltpsalm |
+| Prismakluis / NEON | PRISMA | Failed hacks restore 10 boss HP | Exotic Prismahart |
+| Verdronken Klok / KAGE | HYAKU | Successful hacks lose 3 damage to armour | Legendary Klokkenwachter |
+| Maanoven / KAGE | TSUKI | Failed hacks take 4 extra counterdamage | Exotic Eclips Kernel |
+| Prismakade / NEON | ARC-WARDEN | Failed hacks take 4 extra counterdamage | Legendary Stormhart |
+| Jadeterras / KAGE | KUZUNOHA | Failed hacks take 4 extra counterdamage | Legendary Negenrode Zegel |
+
+Two silent transmitters on NEON and two hidden bells on KAGE unlock optional Legendary relics. Residents give location clues, while hidden mechanisms are omitted from the local map. Ownership is one-time; a duplicate Chip pays 30 Stars. The powerful dungeon rewards are earned, not shop stock. The two active Chip slots continue to force choices among damage, recovery, time, protection and mobility.
+
+The same pool of twenty hack tasks appears in every setting. Four additional tasks complete the original list: fingerprint reconstruction, binary door decoding, safe fuse sizing and physical laser mirror routing. Theme changes presentation, never the answer or the assigned minigame.
+
+Audio is original Web Audio synthesis with planet-specific melody scales and a more urgent combat arrangement. It has no recorded voice actors. Dialogue uses timed speech cues with visible Dutch subtitles, independent volume buses and saved accessibility preferences. Reduced motion disables camera jolts, mouth movement, ambient portrait motion and shine; it shortens battle transitions and preserves all input timing rules.

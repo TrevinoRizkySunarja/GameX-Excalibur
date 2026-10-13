@@ -1,5 +1,6 @@
 import { expandWorlds, addStoryTargets } from "./levels.js";
 import { attachGangs } from "./encounters.js";
+import { expandDistricts } from "./expansion.js";
 export const WORLD_WIDTH = 3072;
 export const WORLD_HEIGHT = 2048;
 
@@ -266,6 +267,7 @@ export const WORLDS = {
 expandWorlds(WORLDS);
 addStoryTargets(WORLDS);
 attachGangs(WORLDS);
+expandDistricts(WORLDS);
 
 export const DESTINATIONS = [
   {
@@ -332,6 +334,10 @@ export const MINIGAMES = [
   "clean",
   "balance",
   "locks",
+  "fingerprint",
+  "decoder",
+  "fuses",
+  "mirrors",
 ];
 export function availableDestinations(state) {
   return [

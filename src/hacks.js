@@ -2,6 +2,7 @@ import { click, success, fail } from "./audio.js";
 const symbols = ["◇", "△", "○", "□"];
 import { HACKS as configs } from "./hack-catalog.js";
 import { mountExtra } from "./extra-hacks.js";
+import { mountAdvanced } from "./advanced-hacks.js";
 const shuffle = (arr) => [...arr].sort(() => Math.random() - 0.5);
 
 export function mountHack(type, world, difficulty, onResult, options = {}) {
@@ -9,7 +10,8 @@ export function mountHack(type, world, difficulty, onResult, options = {}) {
   const [name, instruction, category, limit] = configs[type] || configs.timing;
   root.dataset.theme = world;
   root.dataset.hack = type;
-  root.innerHTML = `<div class="hack-heading"><span class="eyebrow">${category} / WILLEKEURIGE OPDRACHT</span><h2>${name}</h2><p>${instruction}</p></div><div id="minigame" class="minigame"></div><div class="hack-clock"><div id="clock-fill"></div></div><div class="hack-meta"><span id="hack-feedback">Maak verbinding met het netwerk.</span><span id="hack-seconds"></span></div>`;
+  const themed = world === "kage" ? {name:"DE WEG VAN DE KLING",emblem:"刃",link:"INKTZEGEL"} : world === "citadel" ? {name:"GEBROKEN ZON / KERNCODE",emblem:"◈",link:"IMPERIALE LINK"} : {name:"CHROME / NEURAL OVERRIDE",emblem:"⌁",link:"HOLO-LINK"};
+  root.innerHTML = `<div class="hack-flair"><span>${themed.name}</span><b class="protocol-emblem">${themed.emblem}</b><span>${themed.link}</span></div><div class="hack-heading"><span class="eyebrow">${category} / WILLEKEURIGE OPDRACHT</span><h2>${name}</h2><p>${instruction}</p></div><div id="minigame" class="minigame"></div><div class="hack-clock"><div id="clock-fill"></div></div><div class="hack-meta"><span id="hack-feedback" role="status">Maak verbinding met het netwerk.</span><span id="hack-seconds"></span></div>`;
   const field = root.querySelector("#minigame"),
     feedback = root.querySelector("#hack-feedback"),
     clock = root.querySelector("#clock-fill");
@@ -230,7 +232,9 @@ export function mountHack(type, world, difficulty, onResult, options = {}) {
       .forEach((b) => (b.onclick = () => done(b.textContent === q.correct)));
     hint("Kies één combinatie.");
   }
-  if (!["timing", "nodes", "memory", "wires", "logic"].includes(type)) {
+  if (["fingerprint", "decoder", "fuses", "mirrors"].includes(type)) {
+    mountAdvanced(type, {field, hint, done, click});
+  } else if (!["timing", "nodes", "memory", "wires", "logic"].includes(type)) {
     mountExtra(type, {
       field,
       hint,

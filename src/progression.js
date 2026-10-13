@@ -1,5 +1,19 @@
 // Collectible software changes the player's build, never the random hack assignment.
 export const CHIP_LIBRARY = {
+  nullthread: { name: "Null Thread", rarity: "Rare", color: "#71b8ff", description: "+4 seconden en 2 minder counterschade. Nyx’ geschenk voor bevrijde stemmen.", time: 4, shield: 2, source: "Nyx · Wie spreekt er in de ruis?" },
+  fieldheart: { name: "Veldhart", rarity: "Rare", color: "#71b8ff", description: "Herstel 4 HP en doe +3 schade na iedere geslaagde hack.", heal: 4, damage: 3, source: "Cass · Adem voor de benedenstad" },
+  afterburn: { name: "Afterburn Drive", rarity: "Rare", color: "#71b8ff", description: "+40 loopsnelheid en +3 hackschade. Gebouwd uit Wayfarer-hardware.", speed: 40, damage: 3, source: "Flux · Een motor die terugkomt" },
+  starsteel: { name: "Sterrenstaal", rarity: "Rare", color: "#71b8ff", description: "Vermindert counterschade met 5. Akari’s nieuwe eed.", shield: 5, source: "Akari · Het staal onthoudt" },
+  inkmemory: { name: "Inktgeheugen", rarity: "Rare", color: "#71b8ff", description: "+7 seconden per hack en +2 Stars per vondst.", time: 7, stars: 2, source: "Sumi · De letters die overleven" },
+  ronin: { name: "Ronin Protocol", rarity: "Rare", color: "#71b8ff", description: "+6 hackschade en 2 minder counterschade.", damage: 6, shield: 2, source: "Kaede · Een masker zonder meester" },
+  voltpsalm: { name: "Voltpsalm", rarity: "Legendary", color: "#f3c06b", description: "+10 hackschade en +4 seconden. Een koor dat weer voor zichzelf spreekt.", damage: 10, time: 4, source: "Blackline Kathedraal · kernschat" },
+  prismheart: { name: "Prismahart", rarity: "Exotic", color: "#e6a2ff", description: "+10 schade, herstel 5 HP per succes en +20 loopsnelheid.", damage: 10, heal: 5, speed: 20, source: "Prismakluis · kernschat" },
+  bellguard: { name: "Klokkenwachter", rarity: "Legendary", color: "#f3c06b", description: "6 minder counterschade en +5 seconden. Het ritme van de eilanden.", shield: 6, time: 5, source: "Verdronken Klok · kernschat" },
+  eclipse: { name: "Eclips Kernel", rarity: "Exotic", color: "#e6a2ff", description: "+12 schade, 4 minder counterschade en +4 seconden.", damage: 12, shield: 4, time: 4, source: "Maanoven · kernschat" },
+  stormheart: { name: "Stormhart", rarity: "Legendary", color: "#f3c06b", description: "+8 schade en +30 loopsnelheid. Overmeester de Arc-Warden.", damage: 8, speed: 30, source: "ARC-WARDEN · gegarandeerde drop" },
+  kitsune: { name: "Negenrode Zegel", rarity: "Legendary", color: "#f3c06b", description: "+7 schade, +4 seconden en 3 minder counterschade.", damage: 7, time: 4, shield: 3, source: "KUZUNOHA · gegarandeerde drop" },
+  ghostlight: { name: "Spooklicht", rarity: "Legendary", color: "#f3c06b", description: "+6 seconden, herstel 4 HP per succes en +5 Stars per vondst.", time: 6, heal: 4, stars: 5, source: "Nyx’ vervolgquest / de Ster tussen de Ruis" },
+  moonwake: { name: "Maanwaken", rarity: "Legendary", color: "#f3c06b", description: "4 minder counterschade, herstel 4 HP per succes en +25 loopsnelheid.", shield: 4, heal: 4, speed: 25, source: "Akari’s vervolgquest / Wat de Maan Bewaart" },
   overclock: {
     name: "Overclock",
     rarity: "Rare",

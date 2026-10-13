@@ -1,8 +1,10 @@
 import { SIDE_QUESTS } from "./levels.js";
+import { EXPANSION_QUESTS } from "./expansion.js";
 const repair = (target, label) => ({ kind: "hack", target, label });
 const defeat = (target, label) => ({ kind: "defeat", target, label });
 const found = (target, label) => ({ kind: "collect", target, label });
 export const QUESTS = {
+  ...EXPANSION_QUESTS,
   ...Object.fromEntries(
     Object.entries(SIDE_QUESTS).map(([id, q]) => [
       id,

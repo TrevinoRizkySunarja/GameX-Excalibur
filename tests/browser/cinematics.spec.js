@@ -190,8 +190,10 @@ test("important sidequest people have cinematic dialogue and KAGE uses the autho
     path: "test-results/kage-hana-cutscene.png",
     fullPage: true,
   });
-  await expect(page.locator(".cinema-subtitle")).toContainText("laatste zaden");
   await page.locator("#dialogue-next").click();
+  await page.locator("#cinema-subtitle").click();
+  await expect(page.locator(".cinema-subtitle")).toContainText("laatste zaden");
+  while (await page.locator("#dialogue-next").count()) await page.locator("#dialogue-next").click();
   expect(
     await page.evaluate(
       () => window.__PROJECTX__.state.flags["accepted_kage-water"],

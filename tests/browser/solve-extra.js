@@ -1,6 +1,26 @@
 import { expect } from "@playwright/test";
 export async function solveExtra(page, type) {
-  if (type === "rhythm") {
+  if (type === "decoder") {
+    for(let i=0;i<2;i++) {
+      let n=Number(await page.locator(".decoder-target strong").textContent());
+      for(const value of [8,4,2,1]) if(n>=value){await page.locator(`[data-bit="${value}"]`).click();n-=value;}
+      await page.locator("#decoder-confirm").click();
+    }
+  } else if(type==="fuses") {
+    for(const [i,value] of [5,10,15].entries()) {await page.locator(`[data-fuse="${value}"]`).click();await page.locator(`[data-socket="${i}"]`).click();}
+  } else if(type==="fingerprint") {
+    for(let i=0;i<5;i++) {
+      const b=page.locator(`[data-strip="${i}"]`);
+      for(let n=0;n<5 && Number(await b.getAttribute("data-fragment"))!==i;n++) await b.click();
+    }
+    await page.locator("#finger-confirm").click();
+  } else if(type==="mirrors") {
+    for(let i=0;i<4;i++) {
+      const b=page.locator(`[data-mirror="${i}"]`);
+      if(Number(await b.getAttribute("data-rotation"))!==[0,0,1,1][i]) await b.click();
+    }
+    await page.locator("#laser-confirm").click();
+  } else if (type === "rhythm") {
     await page.evaluate(
       () =>
         new Promise((resolve, reject) => {
